@@ -1,0 +1,96 @@
+openapi: 3.0.3
+info:
+  title: Enrol to ITSA API
+  version: '1.0'
+  x-integration-catalogue:
+    reviewed-date: 2025-05-15T15:00:00Z
+    platform: HIP
+    short-description: API that allows the enrolment to ITSA
+    status: ALPHA
+    backends:
+      - MDTP
+    domain: 8
+    sub-domain: 8.15
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: https://api.ipaas.prod.eis.ns2p.corp.hmrc.gov.uk/income-tax-subscription-enrolment
+    description: Corporate - Production
+  - url: https://api.ipaas.preprod.eis.ns2p.corp.hmrc.gov.uk/income-tax-subscription-enrolment
+    description: Corporate – Pre-Production
+  - url: https://api.ipaas.test.eis.ns2n.corp.hmrc.gov.uk/income-tax-subscription-enrolment
+    description: Corporate - Test
+  - url: https://hip.ws.hmrc.gov.uk/income-tax-subscription-enrolment
+    description: MDTP - Production
+  - url: https://hip.ws.ibt.hmrc.gov.uk/income-tax-subscription-enrolment
+    description: MDTP - QA
+security:
+  - oAuth2:
+    - write:itsa-enrolment
+paths:
+  /enrol:
+    post:
+      summary: Enrol to ITSA
+      parameters:
+        - $ref: '#/components/parameters/correlationId'
+      requestBody:
+        description: Data used for enrolment
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/request'
+      responses:
+        '201':
+          description: Known Facts have been transferred successfully
+        '400':
+          description: Wrong request format or required header missing
+        '401':
+          description: Unauthorized
+        '422':
+          description: It was not possible to transfer Known Facts
+components:
+  parameters:
+    correlationId:
+      in: header
+      name: CorrelationId
+      description: A UUID format string for the transaction used for traceability purposes.
+      required: true
+      schema:
+        type: string
+        format: uuid
+        example: f0bd1f32-de51-45cc-9b18-0520d6e3ab1a
+  schemas:
+    request:
+      title: Schema for request data
+      required:
+        - utr
+        - nino
+        - mtdbsa
+      type: object
+      properties:
+        utr:
+          type: string
+          description: The UTR
+          pattern: '^[0-9]{10}$'
+          example: 0123456789
+        nino:
+          type: string
+          description: The NINO
+          pattern: '^[A-Z]{2}[0-9]{6}[A-Z]{1}$'
+          example: AB123456C
+        mtdbsa:
+          type: string
+          description: The MTDBSA
+          pattern: '^[A-Z]{4}[0-9]{11}$'
+          example: ABCD12345678912
+  securitySchemes:
+    oAuth2:
+      type: oauth2
+      description: OAuth2 Client Credentials Flow
+      flows:
+        clientCredentials:
+          tokenUrl: /tokenUrl/not-required
+          scopes:
+            write:itsa-enrolment: Scope for calling ITSA Enrolments
