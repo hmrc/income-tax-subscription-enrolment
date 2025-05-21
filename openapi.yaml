@@ -43,6 +43,10 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/request'
+            example:
+              utr: 1234567890
+              nino: AB123456C
+              mtdbsa: 0987654321
       responses:
         '201':
           description: Known Facts have successfully been inserted in the enrolment store
@@ -52,6 +56,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/responsesBadRequest'
+              example:
+                message: 'Missing request header: CorrelationId'
         '401':
           description: Unauthorized
         '422':
@@ -60,6 +66,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/responsesError'
+              example:
+                code: INVALID_JSON
+                message: Json schema validation failed
 components:
   parameters:
     correlationId:
