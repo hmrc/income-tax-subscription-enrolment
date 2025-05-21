@@ -1,11 +1,13 @@
 openapi: 3.0.3
 info:
-  title: Enrol to ITSA API
-  version: '1.0'
+  title: Enrol to ITSA API.
+  version: '0.1.0'
   x-integration-catalogue:
     reviewed-date: 2025-05-15T15:00:00Z
     platform: HIP
-    short-description: API that allows the enrolment to ITSA
+    short-description: This is intended to enrol a given entity to ITSA and
+      will be used by HMRC to auto-enroll eligible businesses. The API is not
+      responsible for deciding who to enrol.
     status: ALPHA
     backends:
       - MDTP
@@ -31,7 +33,7 @@ security:
 paths:
   /enrol:
     post:
-      summary: Enrol to ITSA
+      summary: This is intended to enrol a given entity to ITSA.
       parameters:
         - $ref: '#/components/parameters/correlationId'
       requestBody:
@@ -43,13 +45,21 @@ paths:
               $ref: '#/components/schemas/request'
       responses:
         '201':
-          description: Known Facts have been transferred successfully
+          description: Known Facts have successfully been inserted in the enrolment store
         '400':
           description: Wrong request format or required header missing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responsesBadRequest'
         '401':
           description: Unauthorized
         '422':
           description: It was not possible to transfer Known Facts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responsesError'
 components:
   parameters:
     correlationId:
@@ -85,6 +95,24 @@ components:
           description: The MTDBSA
           pattern: '^[A-Z]{4}[0-9]{11}$'
           example: ABCD12345678912
+    responsesBadRequest:
+      title: Something is wrong in the request
+      type: object
+      properties:
+        message:
+          type: string
+          description: Description of what has gone wrong
+          example: 'Missing request header: CorrelationId'
+    responsesError:
+      title: Known Facts were not inserted (call to ES6 failed)
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code from ES6
+        message:
+          type: string
+          description: Error message from ES6
   securitySchemes:
     oAuth2:
       type: oauth2
