@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.incometaxsubscriptionenrolment.config
+package models
 
-import com.google.inject.AbstractModule
+import play.api.libs.json._
 
-class Module extends AbstractModule {
+case class Outcome (api: String, status: String)
 
-  override def configure(): Unit = {
+object Outcome {
+  implicit val format: OFormat[Outcome] = Json.format[Outcome]
+}
 
-    bind(classOf[AppConfig]).asEagerSingleton()
-  }
+case class EnrolmentResponse (results: Seq[Outcome])
+
+object EnrolmentResponse {
+  implicit val format: OFormat[EnrolmentResponse] = Json.format[EnrolmentResponse]
 }

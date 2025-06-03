@@ -1,7 +1,8 @@
 
-# income-tax-subscription-enrolment
+# Incoome Tax Subscription Enrolment
 
-This is a placeholder README.md for a new repository
+This service is used to migrate users from existing Self Assessment (IR-SA) enrolments to the Making Tax Digital (HMRC-MTD-IT)
+enrolment.
 
 ### License
 
