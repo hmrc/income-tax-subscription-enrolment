@@ -29,7 +29,6 @@ class EnrolmentController @Inject()(cc: ControllerComponents)
     extends BackendController(cc) {
 
   def enrol(): Action[JsValue] = Action.async(parse.json) { implicit request =>
-    val correlationId = request.headers.get("correlationId").getOrElse("No correlationId")
     withJsonBody[EnrolmentDetails] { enrolmentDetails =>
       Future.successful(Created(Json.toJson(EnrolmentResponse(Seq(Outcome("ES6","ok"))))))
     }
