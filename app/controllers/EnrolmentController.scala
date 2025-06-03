@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.incometaxsubscriptionenrolment.controllers
+package controllers
 
+import models._
+import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.mvc._
+
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.Future
 
 @Singleton()
-class MicroserviceHelloWorldController @Inject()(cc: ControllerComponents)
+class EnrolmentController @Inject()(cc: ControllerComponents)
     extends BackendController(cc) {
 
-  def hello(): Action[AnyContent] = Action.async { _ =>
-    Future.successful(Ok("Hello world"))
+  def enrol(): Action[JsValue] = Action.async(parse.json) { implicit request =>
+    withJsonBody[EnrolmentDetails] { enrolmentDetails =>
+      Future.successful(Created(Json.toJson(EnrolmentResponse(Seq(Outcome("ES6","ok"))))))
+    }
   }
 }

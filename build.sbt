@@ -25,6 +25,7 @@ lazy val microservice = Project("income-tax-subscription-enrolment", file("."))
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     scalacOptions += "-Wconf:src=routes/.*:s",
   )
+  .settings(PlayKeys.playDefaultPort := 9564)
   .settings(CodeCoverageSettings.settings *)
 
 lazy val it = project
