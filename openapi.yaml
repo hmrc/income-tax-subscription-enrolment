@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Enrol to ITSA API.
-  version: '0.1.0'
+  version: '0.1.1'
   x-integration-catalogue:
     reviewed-date: 2025-05-15T15:00:00Z
     platform: HIP
@@ -27,9 +27,6 @@ servers:
     description: MDTP - Production
   - url: https://hip.ws.ibt.hmrc.gov.uk/income-tax-subscription-enrolment
     description: MDTP - QA
-security:
-  - oAuth2:
-    - write:itsa-enrolment
 paths:
   /enrol:
     post:
@@ -50,16 +47,19 @@ paths:
       responses:
         '201':
           description: Known Facts have successfully been inserted in the enrolment store
-        '400':
-          description: Wrong request format or required header missing
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/responsesBadRequest'
+                $ref: '#/components/schemas/responsesSuccess'
               example:
-                message: 'Missing request header: CorrelationId'
-        '401':
-          description: Unauthorized
+                results: [
+                  {
+                    "api": "ES6",
+                    "status": "Ok"
+                  }
+                ]
+        '400':
+          description: Request body is not as expected or missing required request header
         '422':
           description: It was not possible to transfer Known Facts
           content:
@@ -104,14 +104,23 @@ components:
           description: The MTDBSA
           pattern: '^[A-Z]{4}[0-9]{11}$'
           example: ABCD12345678912
-    responsesBadRequest:
-      title: Something is wrong in the request
+    responsesSuccess:
+      title: Successfully called APIs
       type: object
       properties:
-        message:
-          type: string
-          description: Description of what has gone wrong
-          example: 'Missing request header: CorrelationId'
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              api:
+                type: string
+                description: API code
+                example: "ES6"
+              status:
+                type: string
+                description: Status of calling that API
+                example: "Ok"
     responsesError:
       title: Known Facts were not inserted (call to ES6 failed)
       type: object
@@ -122,12 +131,3 @@ components:
         message:
           type: string
           description: Error message from ES6
-  securitySchemes:
-    oAuth2:
-      type: oauth2
-      description: OAuth2 Client Credentials Flow
-      flows:
-        clientCredentials:
-          tokenUrl: /tokenUrl/not-required
-          scopes:
-            write:itsa-enrolment: Scope for calling ITSA Enrolments
