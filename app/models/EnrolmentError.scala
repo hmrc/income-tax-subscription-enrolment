@@ -14,25 +14,12 @@
  * limitations under the License.
  */
 
-package config
+package models
 
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import play.api.libs.json.{Json, OFormat}
 
-import java.net.URL
-import javax.inject.{Inject, Singleton}
+case class EnrolmentError(code: String, message: String)
 
-@Singleton
-class AppConfig @Inject()(
-  config: ServicesConfig,
-  val configuration: Configuration
-) {
-
-  val appName: String = configuration.get[String]("appName")
-
-  private lazy val enrolmentStoreProxyUrl: String =
-    config.baseUrl("enrolment-store-proxy") + "/enrolment-store-proxy/enrolment-store"
-
-  def upsertEnrolmentEnrolmentStoreUrl(enrolmentKey: String): URL =
-    new URL(s"$enrolmentStoreProxyUrl/enrolments/$enrolmentKey")
+object EnrolmentError {
+  implicit val format: OFormat[EnrolmentError] = Json.format[EnrolmentError]
 }

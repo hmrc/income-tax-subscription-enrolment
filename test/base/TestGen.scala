@@ -14,25 +14,26 @@
  * limitations under the License.
  */
 
-package config
+package base
 
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+trait TestGen {
+  private val letters = "ancdefghijklmnopqrstuvwxyz"
 
-import java.net.URL
-import javax.inject.{Inject, Singleton}
+  implicit class Random[A](seq: Seq[A]) {
+    def random: A = {
+      val index = (math.random() * seq.size).toInt
+      seq(index)
+    }
+  }
 
-@Singleton
-class AppConfig @Inject()(
-  config: ServicesConfig,
-  val configuration: Configuration
-) {
+  private def addCharTo(text: String): String = {
+    if (text.length == letters.length) {
+      text
+    } else {
+      addCharTo(text + letters.toSeq.random)
+    }
+  }
 
-  val appName: String = configuration.get[String]("appName")
-
-  private lazy val enrolmentStoreProxyUrl: String =
-    config.baseUrl("enrolment-store-proxy") + "/enrolment-store-proxy/enrolment-store"
-
-  def upsertEnrolmentEnrolmentStoreUrl(enrolmentKey: String): URL =
-    new URL(s"$enrolmentStoreProxyUrl/enrolments/$enrolmentKey")
+  val randomString: String =
+    addCharTo("")
 }

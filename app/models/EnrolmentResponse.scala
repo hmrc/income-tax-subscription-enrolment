@@ -22,6 +22,8 @@ case class Outcome (api: String, status: String)
 
 object Outcome {
   implicit val format: OFormat[Outcome] = Json.format[Outcome]
+
+  def success(api: String): Outcome = Outcome(api, "Ok")
 }
 
 case class EnrolmentResponse (results: Seq[Outcome])

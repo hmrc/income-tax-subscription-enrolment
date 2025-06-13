@@ -14,25 +14,18 @@
  * limitations under the License.
  */
 
-package config
+package stubs
 
-import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+import config.AppConfig
+import connectors.EnrolmentStoreProxyConnector.getEnrolmentKey
+import play.api.http.Status
 
-import java.net.URL
-import javax.inject.{Inject, Singleton}
+object EnrolmentStoreProxyStubs extends WireMockMethods {
 
-@Singleton
-class AppConfig @Inject()(
-  config: ServicesConfig,
-  val configuration: Configuration
-) {
-
-  val appName: String = configuration.get[String]("appName")
-
-  private lazy val enrolmentStoreProxyUrl: String =
-    config.baseUrl("enrolment-store-proxy") + "/enrolment-store-proxy/enrolment-store"
-
-  def upsertEnrolmentEnrolmentStoreUrl(enrolmentKey: String): URL =
-    new URL(s"$enrolmentStoreProxyUrl/enrolments/$enrolmentKey")
+  def stubEnrolmentStoreProxy(appConfig: AppConfig, mtdbsa: String): Unit = {
+    val enrolmentKey = getEnrolmentKey(mtdbsa)
+    val url = appConfig.upsertEnrolmentEnrolmentStoreUrl(enrolmentKey).toString
+    when(method = PUT, uri = url.substring(url.indexOf("/e")))
+      .thenReturn(Status.NO_CONTENT)
+  }
 }
