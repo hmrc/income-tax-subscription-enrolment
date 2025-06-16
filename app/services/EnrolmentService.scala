@@ -48,7 +48,7 @@ class EnrolmentService @Inject()(
     logger.error(s"[EnrolmentService][$location] - Auto enrolment failed for nino: $nino - $detail")
   }
 
-  private def getOutComesFromResult(
+  private def getOutcomesFromResult(
     result: Either[ServiceOutcome, Seq[Outcome]]
   ): Seq[Outcome] = {
     result match {
@@ -63,7 +63,7 @@ class EnrolmentService @Inject()(
     mtdbsa: String,
     nino: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
-    val outcomes = getOutComesFromResult(result)
+    val outcomes = getOutcomesFromResult(result)
     enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
       case Right(_) =>
         Right(outcomes :+ Outcome.success("ES6"))
