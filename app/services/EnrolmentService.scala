@@ -25,7 +25,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class EnrolmentService  @Inject()(
+class EnrolmentService @Inject()(
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector
 )(implicit ec: ExecutionContext) extends Logging {
 
