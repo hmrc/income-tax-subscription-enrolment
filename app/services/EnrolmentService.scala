@@ -37,9 +37,9 @@ class EnrolmentService  @Inject()(
     mtdbsa: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
     for {
-      outcome <- upsertEnrolmentAllocation(Right(Seq.empty), mtdbsa, nino)
+      result <- upsertEnrolmentAllocation(Right(Seq.empty), mtdbsa, nino)
     } yield {
-      outcome
+      result
     }
   }
 
