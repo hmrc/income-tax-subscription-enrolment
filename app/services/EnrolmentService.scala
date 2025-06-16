@@ -17,7 +17,6 @@
 package services
 
 import connectors.EnrolmentStoreProxyConnector
-import connectors.httpparsers.UpsertEnrolmentResponseHttpParser
 import models.{EnrolmentError, Outcome}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
@@ -56,7 +55,7 @@ class EnrolmentService  @Inject()(
     enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
       case Right(_) =>
         Right(outcomes :+ Outcome.success("ES6"))
-      case Left(UpsertEnrolmentResponseHttpParser.UpsertEnrolmentFailure(status, message)) =>
+      case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
         logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
         Left(Left(EnrolmentError(status.toString, message)))
     }

@@ -17,7 +17,6 @@
 package services
 
 import connectors.EnrolmentStoreProxyConnector
-import connectors.httpparsers.UpsertEnrolmentResponseHttpParser.{UpsertEnrolmentFailure, UpsertEnrolmentSuccess}
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
@@ -28,6 +27,7 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import base.TestData
+import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentSuccess}
 
 import scala.concurrent.{ExecutionContext, Future}
 

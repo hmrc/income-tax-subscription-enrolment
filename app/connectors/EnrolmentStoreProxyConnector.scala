@@ -17,12 +17,11 @@
 package connectors
 
 import config.AppConfig
-import connectors.EnrolmentStoreProxyConnector.getEnrolmentKey
-import connectors.httpparsers.UpsertEnrolmentResponseHttpParser
-import connectors.httpparsers.UpsertEnrolmentResponseHttpParser.UpsertEnrolmentResponse
+import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentResponse, UpsertEnrolmentSuccess, getEnrolmentKey}
+import play.api.http.Status.NO_CONTENT
 import play.api.libs.json.Json
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -48,12 +47,24 @@ class EnrolmentStoreProxyConnector @Inject()(
     )
     http.put(appConfig.upsertEnrolmentEnrolmentStoreUrl(enrolmentKey)).withBody(
       body = requestBody
-    ).execute.map(
-      UpsertEnrolmentResponseHttpParser.read
-    )
+    ).execute.map(read)
   }
+
+  private def read(response: HttpResponse): UpsertEnrolmentResponse =
+    response.status match {
+      case NO_CONTENT => Right(UpsertEnrolmentSuccess)
+      case status => Left(UpsertEnrolmentFailure(status, response.body))
+    }
 }
- object EnrolmentStoreProxyConnector {
-   def getEnrolmentKey(mtdbsa: String): String =
-     s"HMRC-MTD-IT~MTDITID~$mtdbsa"
- }
+
+object EnrolmentStoreProxyConnector {
+
+  private type UpsertEnrolmentResponse = Either[UpsertEnrolmentFailure, UpsertEnrolmentSuccess.type]
+
+  case object UpsertEnrolmentSuccess
+
+  case class UpsertEnrolmentFailure(status: Int, message: String)
+
+  def getEnrolmentKey(mtdbsa: String): String =
+    s"HMRC-MTD-IT~MTDITID~$mtdbsa"
+}
