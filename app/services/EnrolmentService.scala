@@ -37,7 +37,7 @@ class EnrolmentService  @Inject()(
     mtdbsa: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
     for {
-      outcome <- upsertEnrolmentAllocation(Seq.empty, mtdbsa, nino)
+      outcome <- upsertEnrolmentAllocation(Right(Seq.empty), mtdbsa, nino)
     } yield {
       outcome
     }
@@ -47,11 +47,22 @@ class EnrolmentService  @Inject()(
     logger.error(s"[EnrolmentService][$location] - Auto enrolment failed for nino: $nino - $detail")
   }
 
+  private def getOutComesFromResult(
+    result: Either[ServiceOutcome, Seq[Outcome]]
+  ): Seq[Outcome] = {
+    result match {
+      case Right(value) => value
+      case Left(Right(value)) => value
+      case Left(Left(_)) => throw new Exception()
+    }
+  }
+
   private def upsertEnrolmentAllocation(
-    outcomes: Seq[Outcome],
+    result: Either[ServiceOutcome, Seq[Outcome]],
     mtdbsa: String,
     nino: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
+    val outcomes = getOutComesFromResult(result)
     enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
       case Right(_) =>
         Right(outcomes :+ Outcome.success("ES6"))
