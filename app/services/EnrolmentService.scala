@@ -54,7 +54,9 @@ class EnrolmentService @Inject()(
     result match {
       case Right(value) => value
       case Left(Right(value)) => value
-      case Left(Left(_)) => throw new Exception()
+      case Left(Left(error)) =>
+        val message = s"General failure: ${error.message}"
+        throw new Exception(message)
     }
   }
 
