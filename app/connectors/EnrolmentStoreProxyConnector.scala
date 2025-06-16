@@ -34,8 +34,8 @@ class EnrolmentStoreProxyConnector @Inject()(
 
   def upsertEnrolment(
     mtdbsa: String,
-    nino: String)
-  (implicit hc: HeaderCarrier): Future[UpsertEnrolmentResponse] = {
+    nino: String
+  )(implicit hc: HeaderCarrier): Future[UpsertEnrolmentResponse] = {
     val enrolmentKey = getEnrolmentKey(mtdbsa)
     val requestBody = Json.obj(
       "verifiers" -> Json.arr(
