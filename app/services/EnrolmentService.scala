@@ -62,8 +62,7 @@ class EnrolmentService @Inject()(
     mtdbsa: String,
     nino: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
-    val outcomes = getOutcomesFromResult(result)
-    outcomes match {
+    getOutcomesFromResult(result) match {
       case Some(outcomes) =>
         enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
           case Right(_) =>
@@ -84,8 +83,7 @@ class EnrolmentService @Inject()(
     nino: String,
     utr: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
-    val outcomes = getOutcomesFromResult(result)
-    outcomes match {
+    getOutcomesFromResult(result) match {
       case Some(outcomes) =>
         enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
           case Right(_) =>
