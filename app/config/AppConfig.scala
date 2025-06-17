@@ -17,6 +17,7 @@
 package config
 
 import play.api.Configuration
+import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 import java.net.URL
@@ -34,5 +35,5 @@ class AppConfig @Inject()(
     config.baseUrl("enrolment-store-proxy") + "/enrolment-store-proxy/enrolment-store"
 
   def upsertEnrolmentEnrolmentStoreUrl(enrolmentKey: String): URL =
-    new URL(s"$enrolmentStoreProxyUrl/enrolments/$enrolmentKey")
+    url"$enrolmentStoreProxyUrl/enrolments/$enrolmentKey"
 }

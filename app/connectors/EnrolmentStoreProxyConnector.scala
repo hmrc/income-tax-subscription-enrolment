@@ -19,7 +19,7 @@ package connectors
 import config.AppConfig
 import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentResponse, UpsertEnrolmentSuccess, getEnrolmentKey}
 import play.api.http.Status.NO_CONTENT
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
@@ -37,16 +37,12 @@ class EnrolmentStoreProxyConnector @Inject()(
     nino: String
   )(implicit hc: HeaderCarrier): Future[UpsertEnrolmentResponse] = {
     val enrolmentKey = getEnrolmentKey(mtdbsa)
-    val requestBody = Json.obj(
-      "verifiers" -> Json.arr(
-        Json.obj(
-          "key" -> "NINO",
-          "value" -> nino
-        )
-      )
-    )
+    val requestBody = EnrolmentStoreProxyRequest(Seq(EnrolmentStoreProxyVerifier(
+      key = "NINO",
+      value = nino
+    )))
     http.put(appConfig.upsertEnrolmentEnrolmentStoreUrl(enrolmentKey)).withBody(
-      body = requestBody
+      body = Json.toJson(requestBody)
     ).execute.map(read)
   }
 
@@ -67,4 +63,21 @@ object EnrolmentStoreProxyConnector {
 
   def getEnrolmentKey(mtdbsa: String): String =
     s"HMRC-MTD-IT~MTDITID~$mtdbsa"
+}
+
+case class EnrolmentStoreProxyVerifier(
+  key: String,
+  value: String
+)
+
+object EnrolmentStoreProxyVerifier {
+  implicit val format: OFormat[EnrolmentStoreProxyVerifier] = Json.format[EnrolmentStoreProxyVerifier]
+}
+
+case class EnrolmentStoreProxyRequest(
+  verifiers: Seq[EnrolmentStoreProxyVerifier]
+)
+
+object EnrolmentStoreProxyRequest {
+  implicit val format: OFormat[EnrolmentStoreProxyRequest] = Json.format[EnrolmentStoreProxyRequest]
 }
