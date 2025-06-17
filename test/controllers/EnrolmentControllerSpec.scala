@@ -27,7 +27,7 @@ import play.api.http.Status.{BAD_REQUEST, CREATED}
 import play.api.libs.json.{JsSuccess, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import services.EnrolmentService
+import services.{EnrolmentService, ServiceOutcome}
 
 import scala.concurrent.Future
 
@@ -58,20 +58,24 @@ class EnrolmentControllerSpec extends AnyWordSpec with Matchers with TestData {
     }
 
     "return 422 when ES6 fails" in {
-      val response = EnrolmentError("404", "")
+      val error = EnrolmentError("404", "")
       when(mockService.enrol(any(), any(), any())(any())).thenReturn(
-        Future.successful(Left(Left(response)))
+        Future.successful(Left(ServiceOutcome(
+          error = Some(error)
+        )))
       )
       val fakeRequest = FakeRequest().withBody(Json.toJson(validEnrolmentDetails))
       val result = controller.enrol()(fakeRequest)
       status(result) shouldBe UNPROCESSABLE_ENTITY
-      Json.fromJson[EnrolmentError](contentAsJson(result)) shouldBe JsSuccess(response)
+      Json.fromJson[EnrolmentError](contentAsJson(result)) shouldBe JsSuccess(error)
     }
 
     "return 201 when ES6 succeeds and other APIs fail" in {
       val response = Seq(Outcome.success("ES6"), Outcome("others", "fail"))
       when(mockService.enrol(any(), any(), any())(any())).thenReturn(
-        Future.successful(Left(Right(response)))
+        Future.successful(Left(ServiceOutcome(
+          outcomes = response
+        )))
       )
       val fakeRequest = FakeRequest().withBody(Json.toJson(validEnrolmentDetails))
       val result = controller.enrol()(fakeRequest)

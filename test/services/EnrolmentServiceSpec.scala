@@ -53,17 +53,19 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     }
 
     "return failure when ES6 fails" in {
-      val response = UpsertEnrolmentFailure(SERVICE_UNAVAILABLE, "")
+      val error = UpsertEnrolmentFailure(SERVICE_UNAVAILABLE, "")
       when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
-        Future.successful(Left(response))
+        Future.successful(Left(error))
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
-      result mustBe Left(Left(response.asError()))
+      result mustBe Left(ServiceOutcome(
+        error = Some(error.asError())
+      ))
     }
   }
 
   implicit class Converter(response: UpsertEnrolmentFailure) {
-    def asError() = EnrolmentError(
+    def asError(): EnrolmentError = EnrolmentError(
       code = response.status.toString,
       message = response.message
     )

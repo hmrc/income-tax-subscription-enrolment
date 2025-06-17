@@ -39,10 +39,10 @@ class EnrolmentController @Inject()(
       ) map {
         case Right(status) =>
           Created(Json.toJson(EnrolmentResponse(status)))
-        case Left(Right(status)) =>
-          Created(Json.toJson(EnrolmentResponse(status)))
-        case Left(Left(error)) =>
-          UnprocessableEntity(Json.toJson(error))
+        case Left(result) => result.error match {
+          case None => Created(Json.toJson(EnrolmentResponse(result.outcomes)))
+          case Some(error) => UnprocessableEntity(Json.toJson(error))
+        }
       }
     }
   }

@@ -29,8 +29,6 @@ class EnrolmentService @Inject()(
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector
 )(implicit ec: ExecutionContext) extends Logging {
 
-  private type ServiceOutcome = Either[EnrolmentError, Seq[Outcome]]
-
   def enrol(
     utr: String,
     nino: String,
@@ -53,10 +51,7 @@ class EnrolmentService @Inject()(
   ): Seq[Outcome] = {
     result match {
       case Right(value) => value
-      case Left(Right(value)) => value
-      case Left(Left(error)) =>
-        val message = s"General failure: ${error.message}"
-        throw new Exception(message)
+      case Left(value) => value.outcomes
     }
   }
 
@@ -71,7 +66,14 @@ class EnrolmentService @Inject()(
         Right(outcomes :+ Outcome.success("ES6"))
       case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
         logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
-        Left(Left(EnrolmentError(status.toString, message)))
+        Left(ServiceOutcome(
+          error = Some(EnrolmentError(status.toString, message)))
+        )
     }
   }
 }
+
+case class ServiceOutcome(
+  error: Option[EnrolmentError] = None,
+  outcomes: Seq[Outcome] = Seq.empty
+)
