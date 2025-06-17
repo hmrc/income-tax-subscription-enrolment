@@ -37,6 +37,7 @@ class EnrolmentService @Inject()(
     val result = Right(Seq.empty)
     for {
       result <- upsertEnrolmentAllocation(result, mtdbsa, nino)
+      // result <- someOtherAction(result, mtdbsa, nino, utr)
     } yield {
       result
     }
@@ -48,10 +49,11 @@ class EnrolmentService @Inject()(
 
   private def getOutcomesFromResult(
     result: Either[ServiceOutcome, Seq[Outcome]]
-  ): Seq[Outcome] = {
+  ): Option[Seq[Outcome]] = {
     result match {
-      case Right(value) => value
-      case Left(value) => value.outcomes
+      case Right(value) => Some(value)
+      case Left(value) if value.error.isDefined => None
+      case Left(value) => Some(value.outcomes)
     }
   }
 
@@ -61,14 +63,40 @@ class EnrolmentService @Inject()(
     nino: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
     val outcomes = getOutcomesFromResult(result)
-    enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
-      case Right(_) =>
-        Right(outcomes :+ Outcome.success("ES6"))
-      case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
-        logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
-        Left(ServiceOutcome(
-          error = Some(EnrolmentError(status.toString, message)))
-        )
+    outcomes match {
+      case Some(outcomes) =>
+        enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
+          case Right(_) =>
+            Right(outcomes :+ Outcome.success("ES6"))
+          case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
+            logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
+            Left(ServiceOutcome(
+              error = Some(EnrolmentError(status.toString, message)))
+            )
+        }
+      case None => Future.successful(result)
+    }
+  }
+
+  private def someOtherAction(
+    result: Either[ServiceOutcome, Seq[Outcome]],
+    mtdbsa: String,
+    nino: String,
+    utr: String
+  )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
+    val outcomes = getOutcomesFromResult(result)
+    outcomes match {
+      case Some(outcomes) =>
+        enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
+          case Right(_) =>
+            Right(outcomes :+ Outcome.success("ES6"))
+          case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
+            logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
+            Left(ServiceOutcome(
+              error = Some(EnrolmentError(status.toString, message)))
+            )
+        }
+      case None => Future.successful(result)
     }
   }
 }

@@ -44,12 +44,16 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   "enrol" should {
     "return success when ES6 succeeds" in {
-      val response = Seq(Outcome.success("ES6"))
       when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
         Future.successful(Right(UpsertEnrolmentSuccess))
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
-      result mustBe Right(response)
+      result match {
+        case Right(outcomes) =>
+          outcomes.contains(Outcome.success("ES6")) mustBe true
+        case Left(_) =>
+          fail
+      }
     }
 
     "return failure when ES6 fails" in {
