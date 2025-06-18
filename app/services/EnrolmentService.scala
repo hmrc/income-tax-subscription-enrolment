@@ -57,15 +57,15 @@ class EnrolmentService @Inject()(
     utr: String,
     function: (Seq[String], Seq[Outcome], String, String, String) => Future[Either[ServiceFailure, ServiceSuccess]]
   ): Future[Either[ServiceFailure, ServiceSuccess]] = result match {
-    case Left(_) => Future.successful(
-      result
-    )
     case Right(success) => function(
       success.data,
       success.outcomes,
       mtdbsa,
       nino,
       utr
+    )
+    case Left(_) => Future.successful(
+      result
     )
   }
 
