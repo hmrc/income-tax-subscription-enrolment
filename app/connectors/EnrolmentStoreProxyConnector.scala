@@ -51,6 +51,9 @@ class EnrolmentStoreProxyConnector @Inject()(
       case NO_CONTENT => Right(UpsertEnrolmentSuccess)
       case status => Left(UpsertEnrolmentFailure(status, response.body))
     }
+
+  def someOtherAction: Future[Boolean] =
+    Future.successful(true)
 }
 
 object EnrolmentStoreProxyConnector {

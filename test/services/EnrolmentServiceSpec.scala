@@ -19,7 +19,7 @@ package services
 import connectors.EnrolmentStoreProxyConnector
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
+import org.mockito.Mockito.{reset, times, verify, when}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -27,11 +27,13 @@ import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import base.TestData
+import com.gargoylesoftware.htmlunit.javascript.host.event.BeforeUnloadEvent
 import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentSuccess}
+import org.scalatest.BeforeAndAfterEach
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
+class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData with BeforeAndAfterEach {
 
   val executionContext: ExecutionContext =
     scala.concurrent.ExecutionContext.Implicits.global
@@ -44,27 +46,39 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   "enrol" should {
     "return success when ES6 succeeds" in {
+      reset(mockConnector)
       when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
         Future.successful(Right(UpsertEnrolmentSuccess))
+      )
+      when(mockConnector.someOtherAction).thenReturn(
+        Future.successful(true)
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result match {
         case Right(outcomes) =>
           outcomes.contains(Outcome.success("ES6")) mustBe true
+          verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
+          verify(mockConnector, times(1)).someOtherAction
         case Left(_) =>
           fail
       }
     }
 
     "return failure when ES6 fails" in {
+      reset(mockConnector)
       val error = UpsertEnrolmentFailure(SERVICE_UNAVAILABLE, "")
       when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
         Future.successful(Left(error))
       )
+      when(mockConnector.someOtherAction).thenReturn(
+        Future.successful(true)
+      )
       val result = await(service.enrol(utr, nino, mtdbsa))
-      result mustBe Left(ServiceOutcome(
+      result mustBe Left(ServiceFailure(
         error = Some(error.asError())
       ))
+      verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
+      verify(mockConnector, times(0)).someOtherAction
     }
   }
 

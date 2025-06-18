@@ -27,7 +27,7 @@ import play.api.http.Status.{BAD_REQUEST, CREATED}
 import play.api.libs.json.{JsSuccess, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
-import services.{EnrolmentService, ServiceOutcome}
+import services.{EnrolmentService, ServiceFailure}
 
 import scala.concurrent.Future
 
@@ -60,7 +60,7 @@ class EnrolmentControllerSpec extends AnyWordSpec with Matchers with TestData {
     "return 422 when ES6 fails" in {
       val error = EnrolmentError("404", "")
       when(mockService.enrol(any(), any(), any())(any())).thenReturn(
-        Future.successful(Left(ServiceOutcome(
+        Future.successful(Left(ServiceFailure(
           error = Some(error)
         )))
       )
@@ -73,7 +73,7 @@ class EnrolmentControllerSpec extends AnyWordSpec with Matchers with TestData {
     "return 201 when ES6 succeeds and other APIs fail" in {
       val response = Seq(Outcome.success("ES6"), Outcome("others", "fail"))
       when(mockService.enrol(any(), any(), any())(any())).thenReturn(
-        Future.successful(Left(ServiceOutcome(
+        Future.successful(Left(ServiceFailure(
           outcomes = response
         )))
       )

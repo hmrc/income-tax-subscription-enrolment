@@ -33,13 +33,16 @@ class EnrolmentService @Inject()(
     utr: String,
     nino: String,
     mtdbsa: String
-  )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
-    val result = Right(Seq.empty)
+  )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, Seq[Outcome]]] = {
+    val result = Right(ServiceSuccess(Seq.empty))
     for {
       result <- upsertEnrolmentAllocation(result, mtdbsa, nino)
-      // result <- someOtherAction(result, mtdbsa, nino, utr)
+      result <- someOtherAction(result, mtdbsa, nino, utr)
     } yield {
-      result
+      result match {
+        case Right(value) => Right(value.outcomes)
+        case Left(error) => Left(error)
+      }
     }
   }
 
@@ -48,28 +51,27 @@ class EnrolmentService @Inject()(
   }
 
   private def getOutcomesFromResult(
-    result: Either[ServiceOutcome, Seq[Outcome]]
+    result: Either[ServiceFailure, ServiceResponse]
   ): Option[Seq[Outcome]] = {
     result match {
-      case Right(value) => Some(value)
-      case Left(value) if value.error.isDefined => None
-      case Left(value) => Some(value.outcomes)
+      case Right(value) => Some(value.outcomes)
+      case Left(_) => None
     }
   }
 
   private def upsertEnrolmentAllocation(
-    result: Either[ServiceOutcome, Seq[Outcome]],
+    result: Either[ServiceFailure, ServiceResponse],
     mtdbsa: String,
     nino: String
-  )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
+  )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, ServiceResponse]] = {
     getOutcomesFromResult(result) match {
       case Some(outcomes) =>
         enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
           case Right(_) =>
-            Right(outcomes :+ Outcome.success("ES6"))
+            Right(ServiceSuccess(outcomes :+ Outcome.success("ES6")))
           case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
             logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
-            Left(ServiceOutcome(
+            Left(ServiceFailure(
               error = Some(EnrolmentError(status.toString, message)))
             )
         }
@@ -78,28 +80,44 @@ class EnrolmentService @Inject()(
   }
 
   private def someOtherAction(
-    result: Either[ServiceOutcome, Seq[Outcome]],
+    result: Either[ServiceFailure, ServiceResponse],
     mtdbsa: String,
     nino: String,
     utr: String
-  )(implicit hc: HeaderCarrier): Future[Either[ServiceOutcome, Seq[Outcome]]] = {
+  )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, ServiceResponse]] = {
     getOutcomesFromResult(result) match {
       case Some(outcomes) =>
-        enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
-          case Right(_) =>
-            Right(outcomes :+ Outcome.success("ES6"))
-          case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
-            logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
-            Left(ServiceOutcome(
-              error = Some(EnrolmentError(status.toString, message)))
-            )
+        enrolmentStoreProxyConnector.someOtherAction.map {
+          case true =>
+            Right(ServiceSuccessWithData[Int](
+              outcomes = outcomes :+ Outcome.success("other"),
+              data = 1
+            ))
+          case false =>
+            logError("someOtherAction", nino, "")
+            Left(ServiceFailure(
+              outcomes = outcomes :+ Outcome("other", "fail")
+            ))
         }
       case None => Future.successful(result)
     }
   }
 }
 
-case class ServiceOutcome(
+trait ServiceResponse {
+  def outcomes: Seq[Outcome]
+}
+
+case class ServiceSuccess(
+  outcomes: Seq[Outcome]
+) extends ServiceResponse
+
+case class ServiceSuccessWithData[A](
+  outcomes: Seq[Outcome],
+  data: A
+) extends ServiceResponse
+
+case class ServiceFailure(
   error: Option[EnrolmentError] = None,
   outcomes: Seq[Outcome] = Seq.empty
 )
