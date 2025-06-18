@@ -36,8 +36,8 @@ class EnrolmentService @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, Seq[Outcome]]] = {
     val resultEmpty = Right(ServiceSuccess(Seq.empty))
     for {
-      resultES6 <- upsertEnrolmentAllocation(resultEmpty, mtdbsa, nino)
-      resultAll <- someOtherAction(resultES6, mtdbsa, nino, utr)
+      resultES6 <- getResult(resultEmpty, mtdbsa, nino, utr, upsertEnrolmentAllocation)
+      resultAll <- getResult(resultES6, mtdbsa, nino, utr, someOtherAction)
     } yield {
       resultAll match {
         case Right(value) => Right(value.outcomes)
@@ -50,65 +50,70 @@ class EnrolmentService @Inject()(
     logger.error(s"[EnrolmentService][$location] - Auto enrolment failed for nino: $nino - $detail")
   }
 
-  private def getOutcomesFromResult(
-    result: Either[ServiceFailure, ServiceSuccess]
-  ): Option[Seq[Outcome]] = {
-    result match {
-      case Right(value) => Some(value.outcomes)
-      case Left(_) => None
-    }
+  private def getResult(
+    result: Either[ServiceFailure, ServiceSuccess],
+    mtdbsa: String,
+    nino: String,
+    utr: String,
+    function: (Seq[String], Seq[Outcome], String, String, String) => Future[Either[ServiceFailure, ServiceSuccess]]
+  ): Future[Either[ServiceFailure, ServiceSuccess]] = result match {
+    case Left(_) => Future.successful(
+      result
+    )
+    case Right(success) => function(
+      success.data,
+      success.outcomes,
+      mtdbsa,
+      nino,
+      utr
+    )
   }
 
   private def upsertEnrolmentAllocation(
-    result: Either[ServiceFailure, ServiceSuccess],
-    mtdbsa: String,
-    nino: String
-  )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, ServiceSuccess]] = {
-    getOutcomesFromResult(result) match {
-      case Some(outcomes) =>
-        enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
-          case Right(_) =>
-            Right(ServiceSuccess(
-              outcomes = outcomes :+ Outcome.success("ES6")
-            ))
-          case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
-            logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
-            Left(ServiceFailure(
-              error = Some(EnrolmentError(status.toString, message)))
-            )
-        }
-      case None => Future.successful(result)
-    }
-  }
-
-  private def someOtherAction(
-    result: Either[ServiceFailure, ServiceSuccess],
+    data: Seq[String],
+    outcomes: Seq[Outcome],
     mtdbsa: String,
     nino: String,
     utr: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, ServiceSuccess]] = {
-    getOutcomesFromResult(result) match {
-      case Some(outcomes) =>
-        enrolmentStoreProxyConnector.someOtherAction.map {
-          case true =>
-            Right(ServiceSuccess(
-              outcomes = outcomes :+ Outcome.success("other"),
-              data = Some("")
-            ))
-          case false =>
-            logError("someOtherAction", "", "")
-            Left(ServiceFailure(
-              outcomes = outcomes :+ Outcome("other", "fail")
-            ))
-        }
-      case None => Future.successful(result)
+    enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
+      case Right(_) =>
+        Right(ServiceSuccess(
+          outcomes = outcomes :+ Outcome.success("ES6")
+        ))
+      case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
+        logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
+        Left(ServiceFailure(
+          error = Some(EnrolmentError(status.toString, message)))
+        )
+    }
+  }
+
+  private def someOtherAction(
+    data: Seq[String],
+    outcomes: Seq[Outcome],
+    mtdbsa: String,
+    nino: String,
+    utr: String
+  )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, ServiceSuccess]] = {
+    enrolmentStoreProxyConnector.someOtherAction.map {
+      case true =>
+        Right(ServiceSuccess(
+          outcomes = outcomes :+ Outcome.success("other"),
+          data = data :+ ""
+        ))
+      case false =>
+        logError("someOtherAction", "", "")
+        Left(ServiceFailure(
+          outcomes = outcomes :+ Outcome("other", "fail")
+        ))
     }
   }
 }
 
 case class ServiceSuccess(
   outcomes: Seq[Outcome],
-  data: Option[String] = None
+  data: Seq[String] = Seq.empty
 )
 
 case class ServiceFailure(
