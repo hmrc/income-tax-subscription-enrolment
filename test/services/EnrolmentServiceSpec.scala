@@ -33,7 +33,7 @@ import org.scalatest.BeforeAndAfterEach
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData with BeforeAndAfterEach {
+class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   val executionContext: ExecutionContext =
     scala.concurrent.ExecutionContext.Implicits.global
