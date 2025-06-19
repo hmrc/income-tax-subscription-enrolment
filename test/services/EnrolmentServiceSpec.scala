@@ -44,14 +44,18 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData with 
     mockConnector
   )(executionContext)
 
+  private def setup() = {
+    reset(mockConnector)
+    when(mockConnector.someOtherAction).thenReturn(
+      Future.successful(true)
+    )
+  }
+
   "enrol" should {
     "return success when ES6 succeeds" in {
-      reset(mockConnector)
+      setup()
       when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
         Future.successful(Right(UpsertEnrolmentSuccess))
-      )
-      when(mockConnector.someOtherAction).thenReturn(
-        Future.successful(true)
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result match {
@@ -65,13 +69,10 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData with 
     }
 
     "return failure when ES6 fails" in {
-      reset(mockConnector)
+      setup();
       val error = UpsertEnrolmentFailure(SERVICE_UNAVAILABLE, "")
       when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
         Future.successful(Left(error))
-      )
-      when(mockConnector.someOtherAction).thenReturn(
-        Future.successful(true)
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result mustBe Left(ServiceFailure(

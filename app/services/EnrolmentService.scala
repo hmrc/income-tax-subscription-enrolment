@@ -36,8 +36,8 @@ class EnrolmentService @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, Seq[Outcome]]] = {
     val resultEmpty = Right(ServiceSuccess(Seq.empty))
     for {
-      resultES6 <- getResult(resultEmpty, mtdbsa, nino, utr, upsertEnrolmentAllocation)
-      resultAll <- getResult(resultES6, mtdbsa, nino, utr, someOtherAction)
+      resultES6 <- getResult("ES6", resultEmpty, mtdbsa, nino, utr, upsertEnrolmentAllocation)
+      resultAll <- getResult("other", resultES6, mtdbsa, nino, utr, someOtherAction)
     } yield {
       resultAll match {
         case Right(value) => Right(value.outcomes)
@@ -51,13 +51,15 @@ class EnrolmentService @Inject()(
   }
 
   private def getResult(
+    apiName: String,
     result: Either[ServiceFailure, ServiceSuccess],
     mtdbsa: String,
     nino: String,
     utr: String,
-    function: (Seq[String], Seq[Outcome], String, String, String) => Future[Either[ServiceFailure, ServiceSuccess]]
+    function: (String, Seq[String], Seq[Outcome], String, String, String) => Future[Either[ServiceFailure, ServiceSuccess]]
   ): Future[Either[ServiceFailure, ServiceSuccess]] = result match {
     case Right(success) => function(
+      apiName,
       success.data,
       success.outcomes,
       mtdbsa,
@@ -70,6 +72,7 @@ class EnrolmentService @Inject()(
   }
 
   private def upsertEnrolmentAllocation(
+    apiName: String,
     data: Seq[String],
     outcomes: Seq[Outcome],
     mtdbsa: String,
@@ -79,7 +82,7 @@ class EnrolmentService @Inject()(
     enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
       case Right(_) =>
         Right(ServiceSuccess(
-          outcomes = outcomes :+ Outcome.success("ES6")
+          outcomes = outcomes :+ Outcome.success(apiName)
         ))
       case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
         logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
@@ -90,6 +93,7 @@ class EnrolmentService @Inject()(
   }
 
   private def someOtherAction(
+    apiName: String,
     data: Seq[String],
     outcomes: Seq[Outcome],
     mtdbsa: String,
@@ -99,13 +103,13 @@ class EnrolmentService @Inject()(
     enrolmentStoreProxyConnector.someOtherAction.map {
       case true =>
         Right(ServiceSuccess(
-          outcomes = outcomes :+ Outcome.success("other"),
+          outcomes = outcomes :+ Outcome.success(apiName),
           data = data :+ ""
         ))
       case false =>
         logError("someOtherAction", "", "")
         Left(ServiceFailure(
-          outcomes = outcomes :+ Outcome("other", "fail")
+          outcomes = outcomes :+ Outcome(apiName, "fail")
         ))
     }
   }
