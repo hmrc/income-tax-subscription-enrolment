@@ -65,7 +65,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       val result = await(service.enrol(utr, nino, mtdbsa))
       result match {
         case Right(outcomes) =>
-          outcomes.contains(Outcome.success("ES6")) mustBe true
+          outcomes.head mustBe Outcome.success("ES6")
           verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
           verify(testConnector, times(1)).someOtherAction(any())
         case Left(_) =>
