@@ -16,7 +16,7 @@
 
 package services
 
-import connectors.EnrolmentStoreProxyConnector
+import connectors.{EnrolmentStoreProxyConnector, TestConnector}
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, times, verify, when}
@@ -38,15 +38,21 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   val executionContext: ExecutionContext =
     scala.concurrent.ExecutionContext.Implicits.global
 
+  private val testConnector = mock[TestConnector]
   private val mockConnector = mock[EnrolmentStoreProxyConnector]
 
   private val service = new EnrolmentService(
+    testConnector,
     mockConnector
   )(executionContext)
 
   private def setup() = {
     reset(mockConnector)
-    when(mockConnector.someOtherAction).thenReturn(
+    reset(testConnector)
+    when(testConnector.setup()).thenReturn(
+      Map(TestConnector.key -> "value")
+    )
+    when(testConnector.someOtherAction(any())).thenReturn(
       Future.successful(true)
     )
   }
@@ -62,7 +68,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
         case Right(outcomes) =>
           outcomes.contains(Outcome.success("ES6")) mustBe true
           verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
-          verify(mockConnector, times(1)).someOtherAction
+          verify(testConnector, times(1)).someOtherAction(any())
         case Left(_) =>
           fail
       }
@@ -79,7 +85,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
         error = Some(error.asError())
       ))
       verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
-      verify(mockConnector, times(0)).someOtherAction
+      verify(testConnector, times(0)).someOtherAction(any())
     }
   }
 

@@ -16,7 +16,7 @@
 
 package services
 
-import connectors.EnrolmentStoreProxyConnector
+import connectors.{EnrolmentStoreProxyConnector, TestConnector}
 import models.{EnrolmentError, Outcome}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
@@ -26,6 +26,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class EnrolmentService @Inject()(
+  testConnector: TestConnector,
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector
 )(implicit ec: ExecutionContext) extends Logging {
 
@@ -34,7 +35,7 @@ class EnrolmentService @Inject()(
     nino: String,
     mtdbsa: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, Seq[Outcome]]] = {
-    val resultEmpty = Right(ServiceSuccess(Seq.empty))
+    val resultEmpty = Right(ServiceSuccess(Seq.empty, testConnector.setup()))
     for {
       resultES6 <- getResult("ES6", resultEmpty, mtdbsa, nino, utr, upsertEnrolmentAllocation)
       resultAll <- getResult("other", resultES6, mtdbsa, nino, utr, someOtherAction)
@@ -82,7 +83,8 @@ class EnrolmentService @Inject()(
     enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
       case Right(_) =>
         Right(ServiceSuccess(
-          outcomes = outcomes :+ Outcome.success(apiName)
+          outcomes = outcomes :+ Outcome.success(apiName),
+          data = data
         ))
       case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
         logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
@@ -100,17 +102,24 @@ class EnrolmentService @Inject()(
     nino: String,
     utr: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, ServiceSuccess]] = {
-    enrolmentStoreProxyConnector.someOtherAction.map {
-      case true =>
-        Right(ServiceSuccess(
-          outcomes = outcomes :+ Outcome.success(apiName),
-          data = data ++ Map(apiName -> "")
-        ))
-      case false =>
-        logError("someOtherAction", "", "")
+    data.get("key") match {
+      case Some(value) => testConnector.someOtherAction(value).map {
+        case true =>
+          Right(ServiceSuccess(
+            outcomes = outcomes :+ Outcome.success(apiName),
+            data = data ++ Map(apiName -> "")
+          ))
+        case false =>
+          logError("someOtherAction", "", "")
+          Left(ServiceFailure(
+            outcomes = outcomes :+ Outcome(apiName, "fail")
+          ))
+      }
+      case None => Future.successful(
         Left(ServiceFailure(
           outcomes = outcomes :+ Outcome(apiName, "fail")
         ))
+      )
     }
   }
 }
