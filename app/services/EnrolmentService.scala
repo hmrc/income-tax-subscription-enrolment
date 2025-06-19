@@ -56,7 +56,7 @@ class EnrolmentService @Inject()(
     mtdbsa: String,
     nino: String,
     utr: String,
-    function: (String, Seq[String], Seq[Outcome], String, String, String) => Future[Either[ServiceFailure, ServiceSuccess]]
+    function: (String, Map[String, String], Seq[Outcome], String, String, String) => Future[Either[ServiceFailure, ServiceSuccess]]
   ): Future[Either[ServiceFailure, ServiceSuccess]] = result match {
     case Right(success) => function(
       apiName,
@@ -73,7 +73,7 @@ class EnrolmentService @Inject()(
 
   private def upsertEnrolmentAllocation(
     apiName: String,
-    data: Seq[String],
+    data: Map[String, String],
     outcomes: Seq[Outcome],
     mtdbsa: String,
     nino: String,
@@ -94,7 +94,7 @@ class EnrolmentService @Inject()(
 
   private def someOtherAction(
     apiName: String,
-    data: Seq[String],
+    data: Map[String, String],
     outcomes: Seq[Outcome],
     mtdbsa: String,
     nino: String,
@@ -104,7 +104,7 @@ class EnrolmentService @Inject()(
       case true =>
         Right(ServiceSuccess(
           outcomes = outcomes :+ Outcome.success(apiName),
-          data = data :+ ""
+          data = data ++ Map(apiName -> "")
         ))
       case false =>
         logError("someOtherAction", "", "")
@@ -117,7 +117,7 @@ class EnrolmentService @Inject()(
 
 case class ServiceSuccess(
   outcomes: Seq[Outcome],
-  data: Seq[String] = Seq.empty
+  data: Map[String, String] = Map.empty
 )
 
 case class ServiceFailure(
