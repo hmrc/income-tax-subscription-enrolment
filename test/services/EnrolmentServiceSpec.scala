@@ -16,20 +16,19 @@
 
 package services
 
+import base.TestData
+import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentSuccess}
 import connectors.{EnrolmentStoreProxyConnector, TestConnector}
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, times, verify, when}
+import org.scalatest.Succeeded
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.http.Status.SERVICE_UNAVAILABLE
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import base.TestData
-import com.gargoylesoftware.htmlunit.javascript.host.event.BeforeUnloadEvent
-import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentSuccess}
-import org.scalatest.BeforeAndAfterEach
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -49,6 +48,9 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   private def setup() = {
     reset(mockConnector)
     reset(testConnector)
+    when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
+      Future.successful(Right(UpsertEnrolmentSuccess))
+    )
     when(testConnector.setup()).thenReturn(
       Map(TestConnector.key -> "value")
     )
@@ -60,9 +62,6 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   "enrol" should {
     "return success when ES6 succeeds" in {
       setup()
-      when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
-        Future.successful(Right(UpsertEnrolmentSuccess))
-      )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result match {
         case Right(outcomes) =>
@@ -86,6 +85,32 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       ))
       verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
       verify(testConnector, times(0)).someOtherAction(any())
+    }
+
+    "return failure if other APIs fail" in {
+      setup()
+      when(testConnector.someOtherAction(any())).thenReturn(
+        Future.successful(false)
+      )
+      val result = await(service.enrol(utr, nino, mtdbsa))
+      result match {
+        case Right(_) => fail
+        case Left(failure) if failure.error.isEmpty => Succeeded
+        case Left(_) => fail
+      }
+    }
+
+    "return failure if required data is absent" in {
+      setup()
+      when(testConnector.setup()).thenReturn(
+        Map.empty
+      )
+      val result = await(service.enrol(utr, nino, mtdbsa))
+      result match {
+        case Right(_) => fail
+        case Left(failure) if failure.error.isEmpty => Succeeded
+        case Left(_) => fail
+      }
     }
   }
 
