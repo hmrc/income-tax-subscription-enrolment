@@ -102,7 +102,7 @@ class EnrolmentService @Inject()(
     nino: String,
     utr: String
   )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, ServiceSuccess]] = {
-    data.get("key") match {
+    data.get(TestConnector.key) match {
       case Some(value) => testConnector.someOtherAction(value).map {
         case true =>
           Right(ServiceSuccess(
