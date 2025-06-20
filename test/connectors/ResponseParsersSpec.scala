@@ -16,44 +16,21 @@
 
 package connectors
 
-import config.AppConfig
 import base.{TestData, TestGen}
 import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentSuccess}
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.when
+import connectors.ResponseParsers.EnrolmentStoreProxyResponseParser
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatestplus.mockito.MockitoSugar.mock
 import play.api.http.Status._
-import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import uk.gov.hmrc.http.HttpResponse
-import uk.gov.hmrc.http.client.{HttpClientV2, RequestBuilder}
 
-import java.net.URL
-import scala.concurrent.Future
+class ResponseParsersSpec extends AnyWordSpec with Matchers with TestData with TestGen {
 
-class EnrolmentStoreProxyConnectorSpec extends AnyWordSpec with Matchers with TestData with TestGen {
-  
-  private val mockHttp = mock[HttpClientV2]
-  private val mockRequest = mock[RequestBuilder]
-  private val mockConfig = mock[AppConfig]
-
-  private val connector = new EnrolmentStoreProxyConnector(
-    mockHttp,
-    mockConfig
-  )
-
-  when(mockHttp.put(any())(any())).thenReturn(mockRequest)
-  when(mockRequest.withBody(any())(any(), any(), any())).thenReturn(mockRequest)
-  when(mockConfig.upsertEnrolmentEnrolmentStoreUrl(any())).thenReturn(new URL("http://localhost:8080/"))
-
-  "upsertEnrolment" should {
+  "EnrolmentStoreProxyResponseParser" should {
     "return success when response to ES6 call is NO_CONTENT" in {
-      when(mockRequest.execute).thenReturn(
-        Future.successful(HttpResponse(NO_CONTENT))
-      )
-      val result = await(connector.upsertEnrolment(mtdbsa, nino))
+      val httpResponse = HttpResponse(NO_CONTENT)
+      val result = EnrolmentStoreProxyResponseParser.read("", "", httpResponse)
       result mustBe Right(UpsertEnrolmentSuccess)
     }
 
@@ -62,13 +39,8 @@ class EnrolmentStoreProxyConnectorSpec extends AnyWordSpec with Matchers with Te
         status = statuses.filter(_ != NO_CONTENT).random,
         message = randomString
       )
-      when(mockRequest.execute).thenReturn(
-        Future.successful(HttpResponse(
-          status = response.status,
-          body = response.message
-        ))
-      )
-      val result = await(connector.upsertEnrolment(mtdbsa, nino))
+      val httpResponse = HttpResponse(response.status, response.message)
+      val result = EnrolmentStoreProxyResponseParser.read("", "", httpResponse)
       result mustBe Left(response)
     }
   }

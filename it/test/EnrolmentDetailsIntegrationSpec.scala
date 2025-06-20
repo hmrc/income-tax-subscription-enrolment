@@ -16,7 +16,7 @@
 
 import base.TestData
 import config.AppConfig
-import helpers.{ComponentSpecBase, WiremockHelper}
+import helpers.ComponentSpecBase
 import models.EnrolmentDetails
 import play.api.http.Status._
 import play.api.libs.json.Json

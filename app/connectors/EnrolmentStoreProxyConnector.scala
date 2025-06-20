@@ -17,11 +17,11 @@
 package connectors
 
 import config.AppConfig
-import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentResponse, UpsertEnrolmentSuccess, getEnrolmentKey}
-import play.api.http.Status.NO_CONTENT
+import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentResponse, getEnrolmentKey}
+import connectors.ResponseParsers.EnrolmentStoreProxyResponseParser
 import play.api.libs.json.{Json, OFormat}
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,19 +43,13 @@ class EnrolmentStoreProxyConnector @Inject()(
     )))
     http.put(appConfig.upsertEnrolmentEnrolmentStoreUrl(enrolmentKey)).withBody(
       body = Json.toJson(requestBody)
-    ).execute.map(read)
+    ).execute
   }
-
-  private def read(response: HttpResponse): UpsertEnrolmentResponse =
-    response.status match {
-      case NO_CONTENT => Right(UpsertEnrolmentSuccess)
-      case status => Left(UpsertEnrolmentFailure(status, response.body))
-    }
 }
 
 object EnrolmentStoreProxyConnector {
 
-  private type UpsertEnrolmentResponse = Either[UpsertEnrolmentFailure, UpsertEnrolmentSuccess.type]
+  type UpsertEnrolmentResponse = Either[UpsertEnrolmentFailure, UpsertEnrolmentSuccess.type]
 
   case object UpsertEnrolmentSuccess
 

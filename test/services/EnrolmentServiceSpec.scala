@@ -66,7 +66,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
           verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
           verify(testConnector, times(1)).someOtherAction(any())
         case Left(_) =>
-          fail
+          fail()
       }
     }
 
@@ -91,9 +91,9 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result match {
-        case Right(_) => fail
+        case Right(_) => fail()
         case Left(failure) if failure.error.isEmpty => Succeeded
-        case Left(_) => fail
+        case Left(_) => fail()
       }
     }
   }
