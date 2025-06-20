@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,13 +52,13 @@ class EnrolmentService @Inject()(
   private def upsertEnrolmentAllocation(
     result: ServiceAbstract,
     mtdbsa: String,
-    nino: String,
+    nino: String
   )(implicit hc: HeaderCarrier): EitherT[Future, ServiceFailure, ServiceSuccess] = {
     EitherT {
       enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
         case Right(_) =>
           Right(ServiceSuccess(
-            outcomes = result.outcomes :+ Outcome.success("ES6"),
+            outcomes = result.outcomes :+ Outcome.success("ES6")
           ))
         case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
           logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
