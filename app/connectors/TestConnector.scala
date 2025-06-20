@@ -16,19 +16,10 @@
 
 package connectors
 
-import connectors.TestConnector.key
-
 import scala.concurrent.Future
 
 class TestConnector {
 
-  def setup(): Map[String, String] =
-    Map(key -> "value")
-
   def someOtherAction(value: String): Future[Boolean] =
     Future.successful(!value.isBlank)
-}
-
-object TestConnector {
-  val key = "key"
 }

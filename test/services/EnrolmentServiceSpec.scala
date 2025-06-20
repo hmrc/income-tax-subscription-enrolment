@@ -51,9 +51,6 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
       Future.successful(Right(UpsertEnrolmentSuccess))
     )
-    when(testConnector.setup()).thenReturn(
-      Map(TestConnector.key -> "value")
-    )
     when(testConnector.someOtherAction(any())).thenReturn(
       Future.successful(true)
     )
@@ -91,19 +88,6 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       setup()
       when(testConnector.someOtherAction(any())).thenReturn(
         Future.successful(false)
-      )
-      val result = await(service.enrol(utr, nino, mtdbsa))
-      result match {
-        case Right(_) => fail
-        case Left(failure) if failure.error.isEmpty => Succeeded
-        case Left(_) => fail
-      }
-    }
-
-    "return failure if required data is absent" in {
-      setup()
-      when(testConnector.setup()).thenReturn(
-        Map.empty
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result match {

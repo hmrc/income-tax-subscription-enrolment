@@ -37,8 +37,8 @@ class EnrolmentController @Inject()(
         enrolmentDetails.nino,
         enrolmentDetails.mtdbsa
       ) map {
-        case Right(status) =>
-          Created(Json.toJson(EnrolmentResponse(status)))
+        case Right(outcomes) =>
+          Created(Json.toJson(EnrolmentResponse(outcomes)))
         case Left(result) => result.error match {
           case None => Created(Json.toJson(EnrolmentResponse(result.outcomes)))
           case Some(error) => UnprocessableEntity(Json.toJson(error))
