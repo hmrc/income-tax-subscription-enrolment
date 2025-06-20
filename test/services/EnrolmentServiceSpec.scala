@@ -58,15 +58,28 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   "enrol" should {
     "return success when ES6 succeeds" in {
-      setup()
-      val result = await(service.enrol(utr, nino, mtdbsa))
-      result match {
-        case Right(outcomes) =>
-          outcomes.head mustBe Outcome.success("ES6")
-          verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
-          verify(testConnector, times(1)).someOtherAction(any())
-        case Left(_) =>
-          fail()
+      Seq(false, true).foreach { failOther =>
+        setup()
+        when(testConnector.someOtherAction(any())).thenReturn(
+          Future.successful(!failOther)
+        )
+        val result = await(service.enrol(utr, nino, mtdbsa))
+        result match {
+          case Right(_) if failOther =>
+            fail()
+          case Right(outcomes) =>
+            outcomes.head mustBe Outcome.success("ES6")
+            verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
+            verify(testConnector, times(1)).someOtherAction(any())
+          case Left(_) if !failOther =>
+            fail()
+          case Left(failure) if failure.error.isDefined =>
+            fail()
+          case Left(failure) =>
+            failure.outcomes.head mustBe Outcome.success("ES6")
+            verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
+            verify(testConnector, times(1)).someOtherAction(any())
+        }
       }
     }
 
