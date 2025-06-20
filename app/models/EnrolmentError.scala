@@ -16,18 +16,10 @@
 
 package models
 
-import play.api.libs.json._
+import play.api.libs.json.{Json, OFormat}
 
-case class Outcome (api: String, status: String)
+case class EnrolmentError(code: String, message: String)
 
-object Outcome {
-  implicit val format: OFormat[Outcome] = Json.format[Outcome]
-
-  def success(api: String): Outcome = Outcome(api, "Ok")
-}
-
-case class EnrolmentResponse (results: Seq[Outcome])
-
-object EnrolmentResponse {
-  implicit val format: OFormat[EnrolmentResponse] = Json.format[EnrolmentResponse]
+object EnrolmentError {
+  implicit val format: OFormat[EnrolmentError] = Json.format[EnrolmentError]
 }

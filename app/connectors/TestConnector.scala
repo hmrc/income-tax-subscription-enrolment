@@ -14,20 +14,12 @@
  * limitations under the License.
  */
 
-package models
+package connectors
 
-import play.api.libs.json._
+import scala.concurrent.Future
 
-case class Outcome (api: String, status: String)
+class TestConnector {
 
-object Outcome {
-  implicit val format: OFormat[Outcome] = Json.format[Outcome]
-
-  def success(api: String): Outcome = Outcome(api, "Ok")
-}
-
-case class EnrolmentResponse (results: Seq[Outcome])
-
-object EnrolmentResponse {
-  implicit val format: OFormat[EnrolmentResponse] = Json.format[EnrolmentResponse]
+  def someOtherAction(value: String): Future[Boolean] =
+    Future.successful(!value.isBlank)
 }

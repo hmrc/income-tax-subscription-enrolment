@@ -16,11 +16,24 @@
 
 package config
 
-import javax.inject.{Inject, Singleton}
 import play.api.Configuration
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+
+import java.net.URL
+import javax.inject.{Inject, Singleton}
 
 @Singleton
-class AppConfig @Inject()(config: Configuration) {
+class AppConfig @Inject()(
+  config: ServicesConfig,
+  val configuration: Configuration
+) {
 
-  val appName: String = config.get[String]("appName")
+  val appName: String = configuration.get[String]("appName")
+
+  private lazy val enrolmentStoreProxyUrl: String =
+    config.baseUrl("enrolment-store-proxy") + "/enrolment-store-proxy/enrolment-store"
+
+  def upsertEnrolmentEnrolmentStoreUrl(enrolmentKey: String): URL =
+    url"$enrolmentStoreProxyUrl/enrolments/$enrolmentKey"
 }

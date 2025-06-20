@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-package models
+package base
 
-import play.api.libs.json._
+trait TestGen {
+  private val letters = "ancdefghijklmnopqrstuvwxyz"
 
-case class Outcome (api: String, status: String)
+  implicit class Random[A](seq: Seq[A]) {
+    def random: A = {
+      val index = (math.random() * seq.size).toInt
+      seq(index)
+    }
+  }
 
-object Outcome {
-  implicit val format: OFormat[Outcome] = Json.format[Outcome]
+  private def addCharTo(text: String): String = {
+    if (text.length == letters.length) {
+      text
+    } else {
+      addCharTo(text + letters.toSeq.random)
+    }
+  }
 
-  def success(api: String): Outcome = Outcome(api, "Ok")
-}
-
-case class EnrolmentResponse (results: Seq[Outcome])
-
-object EnrolmentResponse {
-  implicit val format: OFormat[EnrolmentResponse] = Json.format[EnrolmentResponse]
+  val randomString: String =
+    addCharTo("")
 }

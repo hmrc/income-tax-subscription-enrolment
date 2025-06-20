@@ -18,19 +18,32 @@ package controllers
 
 import models._
 import play.api.libs.json.{JsValue, Json}
-import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import play.api.mvc._
+import services.EnrolmentService
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.{Inject, Singleton}
-import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 @Singleton()
-class EnrolmentController @Inject()(cc: ControllerComponents)
-    extends BackendController(cc) {
+class EnrolmentController @Inject()(
+  enrolmentService: EnrolmentService
+)(implicit cc: ControllerComponents, implicit val ec: ExecutionContext) extends BackendController(cc) {
 
   def enrol(): Action[JsValue] = Action.async(parse.json) { implicit request =>
     withJsonBody[EnrolmentDetails] { enrolmentDetails =>
-      Future.successful(Created(Json.toJson(EnrolmentResponse(Seq(Outcome("ES6","ok"))))))
+      enrolmentService.enrol(
+        enrolmentDetails.utr,
+        enrolmentDetails.nino,
+        enrolmentDetails.mtdbsa
+      ) map {
+        case Right(outcomes) =>
+          Created(Json.toJson(EnrolmentResponse(outcomes)))
+        case Left(result) => result.error match {
+          case None => Created(Json.toJson(EnrolmentResponse(result.outcomes)))
+          case Some(error) => UnprocessableEntity(Json.toJson(error))
+        }
+      }
     }
   }
 }

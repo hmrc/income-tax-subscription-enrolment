@@ -14,29 +14,41 @@
  * limitations under the License.
  */
 
-import controllers.EnrolmentController
+import base.TestData
+import config.AppConfig
 import helpers.ComponentSpecBase
 import models.EnrolmentDetails
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
+import stubs.EnrolmentStoreProxyStubs.stubEnrolmentStoreProxy
 
-class EnrolmentDetailsIntegrationSpec
-  extends ComponentSpecBase {
+import java.util.UUID
 
-  val validEnrolmentDetails = EnrolmentDetails(utr = "1234567890", nino = "AA123456A", mtdbsa = "XABC0000000001")
-  val correlationId = "f0bd1f32-de51-45cc-9b18-0520d6e3ab1a"
+class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
 
-  trait Setup {
-    val controller: EnrolmentController = app.injector.instanceOf[EnrolmentController]
-  }
+  private val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+
+  private val validEnrolmentDetails = EnrolmentDetails(
+    utr = utr,
+    nino = nino,
+    mtdbsa = mtdbsa
+  )
+
+  override def overriddenConfig: Map[String, String] = Map(
+    "microservice.services.enrolment-store-proxy.host" -> mockHost,
+    "microservice.services.enrolment-store-proxy.port" -> mockPort
+  )
+
+  private val correlationId = UUID.randomUUID().toString
 
   "enrol" should {
-    "respond with 201 status" in new Setup {
+    "respond with 201 status" in {
+      stubEnrolmentStoreProxy(appConfig, mtdbsa)
       val response = await(
         buildClient("/enrol")
-        .withHttpHeaders("correlationId" -> correlationId)
-        .post(Json.toJson(validEnrolmentDetails))
+          .withHttpHeaders("correlationId" -> correlationId)
+          .post(Json.toJson(validEnrolmentDetails))
       )
 
       response.status shouldBe CREATED

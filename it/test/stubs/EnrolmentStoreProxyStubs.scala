@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package models
+package stubs
 
-import play.api.libs.json._
+import config.AppConfig
+import connectors.EnrolmentStoreProxyConnector.getEnrolmentKey
+import play.api.http.Status
 
-case class Outcome (api: String, status: String)
+object EnrolmentStoreProxyStubs extends WireMockMethods {
 
-object Outcome {
-  implicit val format: OFormat[Outcome] = Json.format[Outcome]
-
-  def success(api: String): Outcome = Outcome(api, "Ok")
-}
-
-case class EnrolmentResponse (results: Seq[Outcome])
-
-object EnrolmentResponse {
-  implicit val format: OFormat[EnrolmentResponse] = Json.format[EnrolmentResponse]
+  def stubEnrolmentStoreProxy(appConfig: AppConfig, mtdbsa: String): Unit = {
+    val enrolmentKey = getEnrolmentKey(mtdbsa)
+    val url = appConfig.upsertEnrolmentEnrolmentStoreUrl(enrolmentKey).toString
+    when(method = PUT, uri = url.substring(url.indexOf("/e")))
+      .thenReturn(Status.NO_CONTENT)
+  }
 }
