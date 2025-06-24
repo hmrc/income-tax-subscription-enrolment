@@ -17,15 +17,35 @@
 package stubs
 
 import config.AppConfig
-import connectors.EnrolmentStoreProxyConnector.getEnrolmentKey
+import connectors.EnrolmentKey
+import connectors.EnrolmentStoreProxyConnector.principalQueryKey
 import play.api.http.Status
+import play.api.http.Status.OK
+
+import java.net.URL
 
 object EnrolmentStoreProxyStubs extends WireMockMethods {
 
-  def stubEnrolmentStoreProxy(appConfig: AppConfig, mtdbsa: String): Unit = {
-    val enrolmentKey = getEnrolmentKey(mtdbsa)
-    val url = appConfig.upsertEnrolmentEnrolmentStoreUrl(enrolmentKey).toString
-    when(method = PUT, uri = url.substring(url.indexOf("/e")))
+  def stubES6(appConfig: AppConfig, mtdbsa: String): Unit = {
+    val serviceName = "HMRC-MTD-IT"
+    val identifiers = "MTDITID" -> mtdbsa
+    val url = appConfig.upsertEnrolmentEnrolmentStoreUrl(EnrolmentKey(serviceName, identifiers))
+    when(method = PUT, uri = url.toLocal)
       .thenReturn(Status.NO_CONTENT)
+  }
+
+  def stubES1(appConfig: AppConfig, utr: String, groupId: String): Unit = {
+    val serviceName = "IR-SA"
+    val identifiers = "UTR" -> utr
+    val url = appConfig.getAllocatedEnrolmentUrl(EnrolmentKey(serviceName, identifiers), principalQueryKey)
+    when(method = GET, uri = url.toLocal)
+      .thenReturn(OK, s"{\"principalGroupIds\":[\"$groupId\"]}")
+  }
+
+  implicit class StubURl(url: URL) {
+    def toLocal: String = {
+      val str = url.toString
+      str.substring(str.indexOf("/e")).replace("?", "\\?")
+    }
   }
 }

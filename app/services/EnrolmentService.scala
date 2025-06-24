@@ -17,7 +17,8 @@
 package services
 
 import cats.data.EitherT
-import connectors.{EnrolmentStoreProxyConnector, TestConnector}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess}
+import connectors.EnrolmentStoreProxyConnector
 import models.{EnrolmentError, Outcome}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
@@ -27,7 +28,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class EnrolmentService @Inject()(
-  testConnector: TestConnector,
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector
 )(implicit ec: ExecutionContext) extends Logging {
 
@@ -35,13 +35,13 @@ class EnrolmentService @Inject()(
     utr: String,
     nino: String,
     mtdbsa: String
-  )(implicit hc: HeaderCarrier): Future[Either[ServiceFailure, Seq[Outcome]]] = {
-    val result = ServiceSuccess(Seq.empty)
+  )(implicit hc: HeaderCarrier): Future[Either[Failure, Seq[Outcome]]] = {
+    val result = SuccessBase()
     for {
-      result <- upsertEnrolmentAllocation(result, mtdbsa, nino)
-      result <- someOtherAction(result, result.outcomes.head.api)
+      resultES6 <- upsertEnrolmentAllocation(result, mtdbsa, nino)
+      resultES1 <- getGroupIdForEnrolment(resultES6, utr, nino)
     } yield {
-      result.outcomes
+      resultES1.outcomes
     }
   }.value
 
@@ -50,62 +50,83 @@ class EnrolmentService @Inject()(
   }
 
   private def upsertEnrolmentAllocation(
-    result: ServiceAbstract,
+    result: Success,
     mtdbsa: String,
     nino: String
-  )(implicit hc: HeaderCarrier): EitherT[Future, ServiceFailure, ServiceSuccess] = {
+  )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES6] = {
+    val serviceName = "HMRC-MTD-IT"
+    val identifiers = "MTDITID" -> mtdbsa
     EitherT {
-      enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
+      enrolmentStoreProxyConnector.upsertEnrolment(serviceName, identifiers, nino).map {
         case Right(_) =>
-          Right(ServiceSuccess(
+          Right(SuccessES6(
             outcomes = result.outcomes :+ Outcome.success("ES6")
           ))
-        case Left(EnrolmentStoreProxyConnector.UpsertEnrolmentFailure(status, message)) =>
+        case Left(EnrolmentStoreProxyConnector.EnrolmentFailure(status, message)) =>
           logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
-          Left(ServiceFailure(
+          Left(Failure(
             error = Some(EnrolmentError(status.toString, message)))
           )
       }
     }
   }
 
-  private def someOtherAction(
-    result: ServiceAbstract,
-    value: String
-  ): EitherT[Future, ServiceFailure, ServiceSuccessOther] = {
-    val apiName = "other"
+  private def getGroupIdForEnrolment(
+    result: SuccessES6,
+    utr: String,
+    nino: String
+  )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES1] = {
+    val apiName = "ES1"
     val outcomes = result.outcomes
+    val serviceName = "IR-SA"
+    val identifiers = "UTR" -> utr
     EitherT {
-      testConnector.someOtherAction(value).map {
-        case true =>
-          Right(ServiceSuccessOther(
-            outcomes = outcomes :+ Outcome.success(apiName),
-            data = "1"
+      val location = "getGroupIdForEnrolment"
+      enrolmentStoreProxyConnector.getAllocatedEnrolments(serviceName, identifiers) map {
+        case Right(EnrolmentSuccess) =>
+          val message = "Enrolment not allocated"
+          logError(location, nino, message)
+          Left(Failure(
+            outcomes = outcomes :+ Outcome.failure(apiName, message)
           ))
-        case false =>
-          logError("someOtherAction", "", "")
-          Left(ServiceFailure(
-            outcomes = outcomes :+ Outcome(apiName, "fail")
+        case Right(EnrolmentAllocated(groupId)) =>
+          Right(SuccessES1(
+            outcomes = outcomes :+ Outcome.success(apiName),
+            groupId = groupId
+          ))
+        case Left(EnrolmentFailure(_, message)) =>
+          logError(location, nino, message)
+          Left(Failure(
+            outcomes = outcomes :+ Outcome.failure(apiName, message)
           ))
       }
     }
   }
 }
 
-trait ServiceAbstract {
+trait Success {
   def outcomes: Seq[Outcome]
 }
 
-case class ServiceSuccess(
+case class SuccessBase(
+  outcomes: Seq[Outcome] = Seq.empty
+) extends Success
+
+case class SuccessES6(
   outcomes: Seq[Outcome]
-) extends ServiceAbstract
+) extends Success
 
 case class ServiceSuccessOther(
   outcomes: Seq[Outcome],
   data: String
-) extends ServiceAbstract
+) extends Success
 
-case class ServiceFailure(
+case class SuccessES1(
+  outcomes: Seq[Outcome],
+  groupId: String
+) extends Success
+
+case class Failure(
   outcomes: Seq[Outcome] = Seq.empty,
   error: Option[EnrolmentError] = None
 )

@@ -17,8 +17,8 @@
 package services
 
 import base.TestData
-import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentSuccess}
-import connectors.{EnrolmentStoreProxyConnector, TestConnector}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess}
+import connectors.EnrolmentStoreProxyConnector
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, times, verify, when}
@@ -37,70 +37,76 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   val executionContext: ExecutionContext =
     scala.concurrent.ExecutionContext.Implicits.global
 
-  private val testConnector = mock[TestConnector]
   private val mockConnector = mock[EnrolmentStoreProxyConnector]
 
   private val service = new EnrolmentService(
-    testConnector,
     mockConnector
   )(executionContext)
 
   private def setup() = {
     reset(mockConnector)
-    reset(testConnector)
-    when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
-      Future.successful(Right(UpsertEnrolmentSuccess))
+    when(mockConnector.upsertEnrolment(any(), any(), any())(any())).thenReturn(
+      Future.successful(Right(EnrolmentSuccess))
     )
-    when(testConnector.someOtherAction(any())).thenReturn(
-      Future.successful(true)
+    when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
+      Future.successful(Right(EnrolmentAllocated(groupId)))
     )
   }
 
-  "enrol" should {
-    "return success when ES6 succeeds" in {
-      Seq(false, true).foreach { failOther =>
+  def check(success: Boolean): Unit = {
+    val result = await(service.enrol(utr, nino, mtdbsa))
+    result match {
+      case Right(_) if !success =>
+        fail()
+      case Right(outcomes) =>
+        outcomes.head mustBe Outcome.success("ES6")
+        verify(mockConnector, times(1)).upsertEnrolment(any(), any(), any())(any())
+        verify(mockConnector, times(1)).getAllocatedEnrolments(any(), any())(any())
+      case Left(_) if success =>
+        fail()
+      case Left(failure) if failure.error.isDefined =>
+        fail()
+      case Left(failure) =>
+        failure.outcomes.head mustBe Outcome.success("ES6")
+        verify(mockConnector, times(1)).upsertEnrolment(any(), any(), any())(any())
+        verify(mockConnector, times(1)).getAllocatedEnrolments(any(), any())(any())
+    }
+  }
+
+  "enrol" when {
+    "ES6 succeeds and " should {
+      "ES1 succeeds then return success" in {
+        setup();
+        check(true)
+      }
+
+      "ES1 fails then return a failure without error" in {
         setup()
-        when(testConnector.someOtherAction(any())).thenReturn(
-          Future.successful(!failOther)
+        when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
+          Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, "")))
         )
-        val result = await(service.enrol(utr, nino, mtdbsa))
-        result match {
-          case Right(_) if failOther =>
-            fail()
-          case Right(outcomes) =>
-            outcomes.head mustBe Outcome.success("ES6")
-            verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
-            verify(testConnector, times(1)).someOtherAction(any())
-          case Left(_) if !failOther =>
-            fail()
-          case Left(failure) if failure.error.isDefined =>
-            fail()
-          case Left(failure) =>
-            failure.outcomes.head mustBe Outcome.success("ES6")
-            verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
-            verify(testConnector, times(1)).someOtherAction(any())
-        }
+        check(false)
       }
     }
 
-    "return failure when ES6 fails" in {
+    "return failure with error when ES6 fails" in {
       setup();
-      val error = UpsertEnrolmentFailure(SERVICE_UNAVAILABLE, "")
-      when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
+      val error = EnrolmentFailure(SERVICE_UNAVAILABLE, "")
+      when(mockConnector.upsertEnrolment(any(), any(), any())(any())).thenReturn(
         Future.successful(Left(error))
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
-      result mustBe Left(ServiceFailure(
+      result mustBe Left(Failure(
         error = Some(error.asError())
       ))
-      verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
-      verify(testConnector, times(0)).someOtherAction(any())
+      verify(mockConnector, times(1)).upsertEnrolment(any(), any(), any())(any())
+      verify(mockConnector, times(0)).getAllocatedEnrolments(any(), any())(any())
     }
 
-    "return failure if other APIs fail" in {
+    "return failure without error if ES1 fails" in {
       setup()
-      when(testConnector.someOtherAction(any())).thenReturn(
-        Future.successful(false)
+      when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
+        Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, "")))
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result match {
@@ -111,7 +117,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     }
   }
 
-  implicit class Converter(response: UpsertEnrolmentFailure) {
+  implicit class Converter(response: EnrolmentFailure) {
     def asError(): EnrolmentError = EnrolmentError(
       code = response.status.toString,
       message = response.message

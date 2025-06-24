@@ -16,16 +16,22 @@
 
 package connectors
 
-import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentResponse, UpsertEnrolmentSuccess}
-import play.api.http.Status.NO_CONTENT
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentResponse, EnrolmentSuccess, INVALID_JSON}
+import play.api.http.Status.{NO_CONTENT, OK}
+import play.api.libs.json.JsSuccess
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
 object ResponseParsers {
-  implicit object EnrolmentStoreProxyResponseParser extends HttpReads[UpsertEnrolmentResponse] {
-    override def read(method: String, url: String, response: HttpResponse): UpsertEnrolmentResponse =
+  implicit object EnrolmentStoreProxyResponseParser extends HttpReads[EnrolmentResponse] {
+    override def read(method: String, url: String, response: HttpResponse): EnrolmentResponse =
       response.status match {
-        case NO_CONTENT => Right(UpsertEnrolmentSuccess)
-        case status => Left(UpsertEnrolmentFailure(status, response.body))
+        case OK =>
+          (response.json \ "principalGroupIds" \ 0).validate[String] match {
+            case JsSuccess(groupId, _) => Right(EnrolmentAllocated(groupId))
+            case _ => Left(EnrolmentFailure(INVALID_JSON, ""))
+          }
+        case NO_CONTENT => Right(EnrolmentSuccess)
+        case status => Left(EnrolmentFailure(status, response.body))
       }
   }
 }

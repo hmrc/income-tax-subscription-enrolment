@@ -17,7 +17,7 @@
 package connectors
 
 import config.AppConfig
-import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentResponse, getEnrolmentKey}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentResponse, principalQueryKey}
 import connectors.ResponseParsers.EnrolmentStoreProxyResponseParser
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.http.HeaderCarrier
@@ -33,30 +33,42 @@ class EnrolmentStoreProxyConnector @Inject()(
 )(implicit ec: ExecutionContext) {
 
   def upsertEnrolment(
-    mtdbsa: String,
+    serviceName: String,
+    identifiers: (String, String),
     nino: String
-  )(implicit hc: HeaderCarrier): Future[UpsertEnrolmentResponse] = {
-    val enrolmentKey = getEnrolmentKey(mtdbsa)
+  )(implicit hc: HeaderCarrier): Future[EnrolmentResponse] = {
     val requestBody = EnrolmentStoreProxyRequest(Seq(EnrolmentStoreProxyVerifier(
       key = "NINO",
       value = nino
     )))
-    http.put(appConfig.upsertEnrolmentEnrolmentStoreUrl(enrolmentKey)).withBody(
+    http.put(appConfig.upsertEnrolmentEnrolmentStoreUrl(EnrolmentKey(serviceName, identifiers))).withBody(
       body = Json.toJson(requestBody)
     ).execute
+  }
+
+  def getAllocatedEnrolments(
+    serviceName: String,
+    identifiers: (String, String)
+  )(implicit hc: HeaderCarrier): Future[EnrolmentResponse] = {
+    http.get(appConfig.getAllocatedEnrolmentUrl(EnrolmentKey(serviceName, identifiers), principalQueryKey)).execute
   }
 }
 
 object EnrolmentStoreProxyConnector {
 
-  type UpsertEnrolmentResponse = Either[UpsertEnrolmentFailure, UpsertEnrolmentSuccess.type]
+  type EnrolmentResponse = Either[EnrolmentFailure, EnrolmentSuccess]
 
-  case object UpsertEnrolmentSuccess
+  sealed trait EnrolmentSuccess
 
-  case class UpsertEnrolmentFailure(status: Int, message: String)
+  case object EnrolmentSuccess extends EnrolmentSuccess
 
-  def getEnrolmentKey(mtdbsa: String): String =
-    s"HMRC-MTD-IT~MTDITID~$mtdbsa"
+  case class EnrolmentAllocated(groupID: String) extends EnrolmentSuccess
+
+  case class EnrolmentFailure(status: Int, message: String)
+
+  val INVALID_JSON: Int = 2003
+
+  val principalQueryKey: (String, String) = "type" -> "principal"
 }
 
 case class EnrolmentStoreProxyVerifier(
@@ -74,4 +86,12 @@ case class EnrolmentStoreProxyRequest(
 
 object EnrolmentStoreProxyRequest {
   implicit val format: OFormat[EnrolmentStoreProxyRequest] = Json.format[EnrolmentStoreProxyRequest]
+}
+
+case class EnrolmentKey(serviceName: String, identifiers: (String, String)*) {
+  def asString: String = {
+    val formattedIdentifiers = identifiers map { case (key, value) => s"$key~$value" }
+
+    serviceName +: formattedIdentifiers mkString "~"
+  }
 }

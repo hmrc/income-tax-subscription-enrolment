@@ -16,6 +16,7 @@
 
 package config
 
+import connectors.EnrolmentKey
 import play.api.Configuration
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
@@ -34,6 +35,9 @@ class AppConfig @Inject()(
   private lazy val enrolmentStoreProxyUrl: String =
     config.baseUrl("enrolment-store-proxy") + "/enrolment-store-proxy/enrolment-store"
 
-  def upsertEnrolmentEnrolmentStoreUrl(enrolmentKey: String): URL =
-    url"$enrolmentStoreProxyUrl/enrolments/$enrolmentKey"
+  def upsertEnrolmentEnrolmentStoreUrl(enrolmentKey: EnrolmentKey): URL =
+    url"$enrolmentStoreProxyUrl/enrolments/${enrolmentKey.asString}"
+
+  def getAllocatedEnrolmentUrl(enrolmentKey: EnrolmentKey, params: (String, String)): URL =
+    url"$enrolmentStoreProxyUrl/enrolments/${enrolmentKey.asString}/groups?${params._1}=${params._2}"
 }

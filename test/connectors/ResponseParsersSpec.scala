@@ -17,7 +17,7 @@
 package connectors
 
 import base.{TestData, TestGen}
-import connectors.EnrolmentStoreProxyConnector.{UpsertEnrolmentFailure, UpsertEnrolmentSuccess}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, INVALID_JSON}
 import connectors.ResponseParsers.EnrolmentStoreProxyResponseParser
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
@@ -27,19 +27,42 @@ import uk.gov.hmrc.http.HttpResponse
 
 class ResponseParsersSpec extends AnyWordSpec with Matchers with TestData with TestGen {
 
-  "EnrolmentStoreProxyResponseParser" should {
-    "return success when response to ES6 call is NO_CONTENT" in {
+  "ResponseParser" should {
+    "return success when response is NO_CONTENT" in {
       val httpResponse = HttpResponse(NO_CONTENT)
       val result = EnrolmentStoreProxyResponseParser.read("", "", httpResponse)
-      result mustBe Right(UpsertEnrolmentSuccess)
+      result mustBe Right(EnrolmentSuccess)
     }
 
-    "return failure when response to ES6 call is other than NO_CONTENT" in {
-      val response = UpsertEnrolmentFailure(
-        status = statuses.filter(_ != NO_CONTENT).random,
+    "return failure when response is other than OK and NO_CONTENT" in {
+      val response = EnrolmentFailure(
+        status = statuses.filter(_ != NO_CONTENT).filter(_ != OK).random,
         message = randomString
       )
       val httpResponse = HttpResponse(response.status, response.message)
+      val result = EnrolmentStoreProxyResponseParser.read("", "", httpResponse)
+      result mustBe Left(response)
+    }
+
+    "return success with 'groupId' when response is OK and contains valid JSON" in {
+      val groupId = randomString
+      val response = EnrolmentAllocated(groupId)
+      val httpResponse = HttpResponse(
+        status = OK,
+        headers = Map("content-type" -> Seq("application/json")),
+        body = s"{\"principalGroupIds\":[\"$groupId\"]}"
+      )
+      val result = EnrolmentStoreProxyResponseParser.read("", "", httpResponse)
+      result mustBe Right(response)
+    }
+
+    "return failure when response is OK and contains invalid JSON" in {
+      val response = EnrolmentFailure(INVALID_JSON, "")
+      val httpResponse = HttpResponse(
+        status = OK,
+        headers = Map("content-type" -> Seq("application/json")),
+        body = s"{\"principalGroupIds\":\"$randomString\"}"
+      )
       val result = EnrolmentStoreProxyResponseParser.read("", "", httpResponse)
       result mustBe Left(response)
     }
