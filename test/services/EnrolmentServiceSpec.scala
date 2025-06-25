@@ -17,12 +17,11 @@
 package services
 
 import base.TestData
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess}
 import connectors.EnrolmentStoreProxyConnector
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess}
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, times, verify, when}
-import org.scalatest.Succeeded
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -53,39 +52,18 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     )
   }
 
-  def check(success: Boolean): Unit = {
-    val result = await(service.enrol(utr, nino, mtdbsa))
-    result match {
-      case Right(_) if !success =>
-        fail()
-      case Right(outcomes) =>
-        outcomes.head mustBe Outcome.success("ES6")
-        verify(mockConnector, times(1)).upsertEnrolment(any(), any(), any())(any())
-        verify(mockConnector, times(1)).getAllocatedEnrolments(any(), any())(any())
-      case Left(_) if success =>
-        fail()
-      case Left(failure) if failure.error.isDefined =>
-        fail()
-      case Left(failure) =>
-        failure.outcomes.head mustBe Outcome.success("ES6")
-        verify(mockConnector, times(1)).upsertEnrolment(any(), any(), any())(any())
-        verify(mockConnector, times(1)).getAllocatedEnrolments(any(), any())(any())
-    }
-  }
-
-  "enrol" when {
-    "ES6 succeeds and " should {
-      "ES1 succeeds then return success" in {
-        setup();
-        check(true)
-      }
-
-      "ES1 fails then return a failure without error" in {
-        setup()
-        when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
-          Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, "")))
-        )
-        check(false)
+  "enrol" should {
+    "return success when all APIs succeed" in {
+      setup();
+      val result = await(service.enrol(utr, nino, mtdbsa))
+      val allAPIs = Seq("ES6") ++ otherAPIs
+      info(s"Succeeding [${allAPIs.mkString(", ")}]")
+      val expected = allAPIs.map(Outcome.success)
+      result match {
+        case Right(outcomes) =>
+          outcomes mustBe expected
+        case Left(_) =>
+          fail()
       }
     }
 
@@ -103,16 +81,23 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       verify(mockConnector, times(0)).getAllocatedEnrolments(any(), any())(any())
     }
 
-    "return failure without error if ES1 fails" in {
-      setup()
-      when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
-        Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, "")))
-      )
-      val result = await(service.enrol(utr, nino, mtdbsa))
-      result match {
-        case Right(_) => fail()
-        case Left(failure) if failure.error.isEmpty => Succeeded
-        case Left(_) => fail()
+    "return failure without error if other APIs fail" in {
+      otherAPIs.foreach { api =>
+        setup()
+        failAPI(api)
+        val result = await(service.enrol(utr, nino, mtdbsa))
+        result match {
+          case Right(_) =>
+            fail()
+          case Left(failure) if failure.error.isEmpty =>
+            val outcomes = failure.outcomes
+            outcomes.head mustBe Outcome.success("ES6")
+            val last = outcomes.last
+            last.api mustBe api
+            last.status.startsWith("Failure: ") mustBe true
+          case Left(_) =>
+            fail()
+        }
       }
     }
   }
@@ -121,6 +106,25 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     def asError(): EnrolmentError = EnrolmentError(
       code = response.status.toString,
       message = response.message
+    )
+  }
+
+  private val otherAPIs = Seq(
+    "ES1"
+  )
+
+  private def failAPI(api: String) = {
+    api match {
+      case "ES1" => failES1
+      case _ =>
+        throw new Exception(s"Unknown API: $api")
+    }
+    info(s"Failing [$api]")
+  }
+
+  private def failES1 = {
+    when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
+      Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, "Service unavailable")))
     )
   }
 }
