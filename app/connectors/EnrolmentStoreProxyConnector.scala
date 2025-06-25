@@ -18,7 +18,6 @@ package connectors
 
 import config.AppConfig
 import connectors.EnrolmentStoreProxyConnector.{EnrolmentResponse, principalQueryKey}
-import connectors.ResponseParsers.EnrolmentStoreProxyResponseParser
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -41,6 +40,7 @@ class EnrolmentStoreProxyConnector @Inject()(
       key = "NINO",
       value = nino
     )))
+    import connectors.EnrolmentStoreParsers.UpsertResponseParser
     http.put(appConfig.upsertEnrolmentEnrolmentStoreUrl(EnrolmentKey(serviceName, identifiers))).withBody(
       body = Json.toJson(requestBody)
     ).execute
@@ -50,6 +50,7 @@ class EnrolmentStoreProxyConnector @Inject()(
     serviceName: String,
     identifiers: (String, String)
   )(implicit hc: HeaderCarrier): Future[EnrolmentResponse] = {
+    import connectors.EnrolmentStoreParsers.GroupIdResponseParser
     http.get(appConfig.getAllocatedEnrolmentUrl(EnrolmentKey(serviceName, identifiers), principalQueryKey)).execute
   }
 }
