@@ -27,8 +27,8 @@ import uk.gov.hmrc.http.HttpResponse
 
 class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData with TestGen {
 
-  "EnrolmentStoreParsers" should {
-    "[UpsertResponseParser]" should {
+  "EnrolmentStoreParsers" when {
+    "UpsertResponseParser is invoked" should {
       "return success when response is NO_CONTENT" in {
         val httpResponse = HttpResponse(NO_CONTENT)
         val result = UpsertResponseParser.read("", "", httpResponse)
@@ -46,7 +46,7 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
       }
     }
 
-    "[GroupIdResponseParser]" should {
+    "GroupIdResponseParser is invoked" should {
       "return success with 'groupId' when response is OK and contains valid JSON" in {
         val groupId = randomString
         val response = EnrolmentAllocated(groupId)
