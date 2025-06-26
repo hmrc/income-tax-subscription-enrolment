@@ -18,7 +18,7 @@ package services
 
 import base.TestData
 import connectors.EnrolmentStoreProxyConnector
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, times, verify, when}
@@ -49,6 +49,9 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     )
     when(mockConnector.getAllocatedEnrolments(any())(any())).thenReturn(
       Future.successful(Right(EnrolmentAllocated(groupId)))
+    )
+    when(mockConnector.getUserIds(any())(any())).thenReturn(
+      Future.successful(Right(UsersFound(userIds)))
     )
   }
 
@@ -108,12 +111,14 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   }
 
   private val otherAPIs = Seq(
-    "ES1"
+    "ES1",
+    "ES0"
   )
 
   private def failAPI(api: String): String = {
     val message = api match {
       case "ES1" => failES1
+      case "ES0" => failES0
       case _ =>
         throw new Exception(s"Unknown API: $api")
     }
@@ -124,6 +129,14 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   private def failES1: String = {
     val message = "Service unavailable"
     when(mockConnector.getAllocatedEnrolments(any())(any())).thenReturn(
+      Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, message)))
+    )
+    message
+  }
+
+  private def failES0: String = {
+    val message = "Service unavailable"
+    when(mockConnector.getUserIds(any())(any())).thenReturn(
       Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, message)))
     )
     message

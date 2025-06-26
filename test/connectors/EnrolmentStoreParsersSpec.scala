@@ -17,8 +17,8 @@
 package connectors
 
 import base.{TestData, TestGen}
-import connectors.EnrolmentStoreParsers.{GroupIdResponseParser, UpsertResponseParser}
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess}
+import connectors.EnrolmentStoreParsers.{GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -79,6 +79,42 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
         val result = GroupIdResponseParser.read("", "", httpResponse)
         result mustBe Left(response)
       }
+    }
+  }
+
+  "UserIdsResponseParser is invoked" should {
+    "return success with 'userIds' when response is OK and contains valid JSON" in {
+      val userId1 = randomString
+      val userId2 = randomString
+      val response = UsersFound(Set(userId1, userId2))
+      val httpResponse = HttpResponse(
+        status = OK,
+        headers = Map("content-type" -> Seq("application/json")),
+        body = s"{\"principalUserIds\":[\"$userId1\",\"$userId2\"]}"
+      )
+      val result = UserIdsResponseParser.read("", "", httpResponse)
+      result mustBe Right(response)
+    }
+
+    "return failure when response is OK and contains invalid JSON" in {
+      val response = EnrolmentFailure(INTERNAL_SERVER_ERROR, "Unexpected JSON in response")
+      val httpResponse = HttpResponse(
+        status = OK,
+        headers = Map("content-type" -> Seq("application/json")),
+        body = s"{\"principalUserIds\":\"$randomString\"}"
+      )
+      val result = UserIdsResponseParser.read("", "", httpResponse)
+      result mustBe Left(response)
+    }
+
+    "return failure when response is other than OK" in {
+      val response = EnrolmentFailure(
+        status = statuses.filter(_ != OK).random,
+        message = randomString
+      )
+      val httpResponse = HttpResponse(response.status, response.message)
+      val result = UserIdsResponseParser.read("", "", httpResponse)
+      result mustBe Left(response)
     }
   }
 }

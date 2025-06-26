@@ -16,17 +16,25 @@
 
 package connectors
 
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentResponse, EnrolmentSuccess}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentResponse, EnrolmentSuccess, UsersFound}
 import play.api.http.Status.{INTERNAL_SERVER_ERROR, NO_CONTENT, OK}
 import play.api.libs.json.JsSuccess
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
 object EnrolmentStoreParsers {
+  private val jsonError = Left(EnrolmentFailure(INTERNAL_SERVER_ERROR, "Unexpected JSON in response"))
+
+  private def error(response: HttpResponse) =
+    Left(EnrolmentFailure(
+      response.status,
+      response.body
+    ))
+
   implicit object UpsertResponseParser extends HttpReads[EnrolmentResponse] {
     override def read(method: String, url: String, response: HttpResponse): EnrolmentResponse =
       response.status match {
         case NO_CONTENT => Right(EnrolmentSuccess)
-        case status => Left(EnrolmentFailure(status, response.body))
+        case _ => error(response)
       }
   }
 
@@ -36,9 +44,21 @@ object EnrolmentStoreParsers {
         case OK =>
           (response.json \ "principalGroupIds" \ 0).validate[String] match {
             case JsSuccess(groupId, _) => Right(EnrolmentAllocated(groupId))
-            case _ => Left(EnrolmentFailure(INTERNAL_SERVER_ERROR, "Unexpected JSON in response"))
+            case _ => jsonError
           }
-        case status => Left(EnrolmentFailure(status, response.body))
+        case _ => error(response)
+      }
+  }
+
+  implicit object UserIdsResponseParser extends HttpReads[EnrolmentResponse] {
+    override def read(method: String, url: String, response: HttpResponse): EnrolmentResponse =
+      response.status match {
+        case OK =>
+          (response.json \ "principalUserIds").validate[Set[String]] match {
+            case JsSuccess(userIds, _) => Right(UsersFound(userIds))
+            case _ => jsonError
+          }
+        case _ => error(response)
       }
   }
 }

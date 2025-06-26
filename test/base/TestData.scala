@@ -41,6 +41,11 @@ trait TestData {
 
   val groupId: String = UUID.randomUUID().toString
 
+  val userIds: Set[String] = Set(
+    UUID.randomUUID().toString,
+    UUID.randomUUID().toString
+  )
+
   val statuses: Seq[Int] = Seq(
     CONTINUE,
     SWITCHING_PROTOCOLS,

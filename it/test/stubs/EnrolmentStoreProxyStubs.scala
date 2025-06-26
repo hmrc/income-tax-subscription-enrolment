@@ -46,6 +46,17 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
       .thenReturn(OK, s"{\"principalGroupIds\":[\"$groupId\"]}")
   }
 
+  def stubES0(appConfig: AppConfig, utr: String, userIds: Set[String]): Unit = {
+    val enrolmentKey = EnrolmentKey(
+      serviceName = "IR-SA",
+      identifiers = "UTR" -> utr
+    )
+    val users = userIds.map(id => s"\"$id\"").mkString(",")
+    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/users"
+    when(method = GET, uri = url.toLocal)
+      .thenReturn(OK, s"{\"principalUserIds\":[$users]}")
+  }
+
   implicit class StubURL(url: URL) {
     def toLocal: String = {
       val str = url.toString

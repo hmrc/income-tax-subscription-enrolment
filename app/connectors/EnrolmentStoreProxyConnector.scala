@@ -60,6 +60,18 @@ class EnrolmentStoreProxyConnector @Inject()(
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/groups?type=principal"
     http.get(url).execute
   }
+
+  def getUserIds(
+    utr: String
+  )(implicit hc: HeaderCarrier): Future[EnrolmentResponse] = {
+    import connectors.EnrolmentStoreParsers.UserIdsResponseParser
+    val enrolmentKey = EnrolmentKey(
+      serviceName = "IR-SA",
+      identifiers = "UTR" -> utr
+    )
+    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/users"
+    http.get(url).execute
+  }
 }
 
 object EnrolmentStoreProxyConnector {
@@ -71,6 +83,8 @@ object EnrolmentStoreProxyConnector {
   case object EnrolmentSuccess extends EnrolmentSuccess
 
   case class EnrolmentAllocated(groupID: String) extends EnrolmentSuccess
+
+  case class UsersFound(users: Set[String]) extends EnrolmentSuccess
 
   case class EnrolmentFailure(status: Int, message: String)
 }
