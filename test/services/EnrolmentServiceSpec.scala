@@ -84,7 +84,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     "return failure without error if other APIs fail" in {
       otherAPIs.foreach { api =>
         setup()
-        failAPI(api)
+        val message = failAPI(api)
         val result = await(service.enrol(utr, nino, mtdbsa))
         result match {
           case Right(_) =>
@@ -92,9 +92,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
           case Left(failure) if failure.error.isEmpty =>
             val outcomes = failure.outcomes
             outcomes.head mustBe Outcome.success("ES6")
-            val last = outcomes.last
-            last.api mustBe api
-            last.status.startsWith("Failure: ") mustBe true
+            outcomes.last mustBe Outcome.failure(api, message)
           case Left(_) =>
             fail()
         }
@@ -113,18 +111,21 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     "ES1"
   )
 
-  private def failAPI(api: String) = {
-    api match {
+  private def failAPI(api: String): String = {
+    val message = api match {
       case "ES1" => failES1
       case _ =>
         throw new Exception(s"Unknown API: $api")
     }
     info(s"Failing [$api]")
+    message
   }
 
-  private def failES1 = {
+  private def failES1: String = {
+    val message = "Service unavailable"
     when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
-      Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, "Service unavailable")))
+      Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, message)))
     )
+    message
   }
 }
