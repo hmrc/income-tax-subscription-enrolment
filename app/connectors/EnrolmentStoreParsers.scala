@@ -16,8 +16,8 @@
 
 package connectors
 
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentResponse, EnrolmentSuccess, INVALID_JSON}
-import play.api.http.Status.{NO_CONTENT, OK}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentResponse, EnrolmentSuccess}
+import play.api.http.Status.{INTERNAL_SERVER_ERROR, NO_CONTENT, OK}
 import play.api.libs.json.JsSuccess
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
 
@@ -36,7 +36,7 @@ object EnrolmentStoreParsers {
         case OK =>
           (response.json \ "principalGroupIds" \ 0).validate[String] match {
             case JsSuccess(groupId, _) => Right(EnrolmentAllocated(groupId))
-            case _ => Left(EnrolmentFailure(INVALID_JSON, ""))
+            case _ => Left(EnrolmentFailure(INTERNAL_SERVER_ERROR, "Unexpected JSON in response"))
           }
         case status => Left(EnrolmentFailure(status, response.body))
       }

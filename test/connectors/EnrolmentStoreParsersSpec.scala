@@ -17,7 +17,7 @@
 package connectors
 
 import base.{TestData, TestGen}
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, INVALID_JSON}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess}
 import connectors.EnrolmentStoreParsers.{GroupIdResponseParser, UpsertResponseParser}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
@@ -60,7 +60,7 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
       }
 
       "return failure when response is OK and contains invalid JSON" in {
-        val response = EnrolmentFailure(INVALID_JSON, "")
+        val response = EnrolmentFailure(INTERNAL_SERVER_ERROR, "Unexpected JSON in response")
         val httpResponse = HttpResponse(
           status = OK,
           headers = Map("content-type" -> Seq("application/json")),

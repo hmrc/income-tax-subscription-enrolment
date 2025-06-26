@@ -44,10 +44,10 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   private def setup() = {
     reset(mockConnector)
-    when(mockConnector.upsertEnrolment(any(), any(), any())(any())).thenReturn(
+    when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
       Future.successful(Right(EnrolmentSuccess))
     )
-    when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
+    when(mockConnector.getAllocatedEnrolments(any())(any())).thenReturn(
       Future.successful(Right(EnrolmentAllocated(groupId)))
     )
   }
@@ -70,15 +70,15 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     "return failure with error when ES6 fails" in {
       setup();
       val error = EnrolmentFailure(SERVICE_UNAVAILABLE, "")
-      when(mockConnector.upsertEnrolment(any(), any(), any())(any())).thenReturn(
+      when(mockConnector.upsertEnrolment(any(), any())(any())).thenReturn(
         Future.successful(Left(error))
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result mustBe Left(Failure(
         error = Some(error.asError())
       ))
-      verify(mockConnector, times(1)).upsertEnrolment(any(), any(), any())(any())
-      verify(mockConnector, times(0)).getAllocatedEnrolments(any(), any())(any())
+      verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
+      verify(mockConnector, times(0)).getAllocatedEnrolments(any())(any())
     }
 
     "return failure without error if other APIs fail" in {
@@ -123,7 +123,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   private def failES1: String = {
     val message = "Service unavailable"
-    when(mockConnector.getAllocatedEnrolments(any(), any())(any())).thenReturn(
+    when(mockConnector.getAllocatedEnrolments(any())(any())).thenReturn(
       Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, message)))
     )
     message

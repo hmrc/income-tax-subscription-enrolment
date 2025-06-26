@@ -54,10 +54,8 @@ class EnrolmentService @Inject()(
     mtdbsa: String,
     nino: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES6] = {
-    val serviceName = "HMRC-MTD-IT"
-    val identifiers = "MTDITID" -> mtdbsa
     EitherT {
-      enrolmentStoreProxyConnector.upsertEnrolment(serviceName, identifiers, nino).map {
+      enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
         case Right(_) =>
           Right(SuccessES6(
             outcomes = result.outcomes :+ Outcome.success("ES6")
@@ -78,11 +76,9 @@ class EnrolmentService @Inject()(
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES1] = {
     val apiName = "ES1"
     val outcomes = result.outcomes
-    val serviceName = "IR-SA"
-    val identifiers = "UTR" -> utr
     EitherT {
       val location = "getGroupIdForEnrolment"
-      enrolmentStoreProxyConnector.getAllocatedEnrolments(serviceName, identifiers) map {
+      enrolmentStoreProxyConnector.getAllocatedEnrolments(utr) map {
         case Right(EnrolmentSuccess) =>
           val message = "Enrolment not allocated"
           logError(location, nino, message)

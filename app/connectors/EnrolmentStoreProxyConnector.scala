@@ -17,10 +17,10 @@
 package connectors
 
 import config.AppConfig
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentResponse, principalQueryKey}
+import connectors.EnrolmentStoreProxyConnector.EnrolmentResponse
 import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,26 +32,33 @@ class EnrolmentStoreProxyConnector @Inject()(
 )(implicit ec: ExecutionContext) {
 
   def upsertEnrolment(
-    serviceName: String,
-    identifiers: (String, String),
+    mtdbsa: String,
     nino: String
   )(implicit hc: HeaderCarrier): Future[EnrolmentResponse] = {
+    val enrolmentKey = EnrolmentKey(
+      serviceName = "HMRC-MTD-IT",
+      identifiers = "MTDITID" -> mtdbsa
+    )
     val requestBody = EnrolmentStoreProxyRequest(Seq(EnrolmentStoreProxyVerifier(
       key = "NINO",
       value = nino
     )))
     import connectors.EnrolmentStoreParsers.UpsertResponseParser
-    http.put(appConfig.upsertEnrolmentEnrolmentStoreUrl(EnrolmentKey(serviceName, identifiers))).withBody(
+    http.put(url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}").withBody(
       body = Json.toJson(requestBody)
     ).execute
   }
 
   def getAllocatedEnrolments(
-    serviceName: String,
-    identifiers: (String, String)
+    utr: String
   )(implicit hc: HeaderCarrier): Future[EnrolmentResponse] = {
     import connectors.EnrolmentStoreParsers.GroupIdResponseParser
-    http.get(appConfig.getAllocatedEnrolmentUrl(EnrolmentKey(serviceName, identifiers), principalQueryKey)).execute
+    val enrolmentKey = EnrolmentKey(
+      serviceName = "IR-SA",
+      identifiers = "UTR" -> utr
+    )
+    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/groups?type=principal"
+    http.get(url).execute
   }
 }
 
@@ -66,10 +73,6 @@ object EnrolmentStoreProxyConnector {
   case class EnrolmentAllocated(groupID: String) extends EnrolmentSuccess
 
   case class EnrolmentFailure(status: Int, message: String)
-
-  val INVALID_JSON: Int = 2003
-
-  val principalQueryKey: (String, String) = "type" -> "principal"
 }
 
 case class EnrolmentStoreProxyVerifier(
