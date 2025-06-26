@@ -17,10 +17,8 @@
 package config
 
 import play.api.Configuration
-import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
-import java.net.URL
 import javax.inject.{Inject, Singleton}
 
 @Singleton
@@ -34,6 +32,6 @@ class AppConfig @Inject()(
   private lazy val enrolmentStoreProxyUrl: String =
     config.baseUrl("enrolment-store-proxy") + "/enrolment-store-proxy/enrolment-store"
 
-  def upsertEnrolmentEnrolmentStoreUrl(enrolmentKey: String): URL =
-    url"$enrolmentStoreProxyUrl/enrolments/$enrolmentKey"
+  lazy val enrolmentEnrolmentStoreUrl: String =
+    s"$enrolmentStoreProxyUrl/enrolments"
 }

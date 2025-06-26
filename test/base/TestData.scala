@@ -21,6 +21,7 @@ import play.api.mvc.ControllerComponents
 import play.api.test.Helpers
 import uk.gov.hmrc.http.HeaderCarrier
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 
 trait TestData {
@@ -38,7 +39,9 @@ trait TestData {
   val nino = "AA123456A"
   val mtdbsa = "XABC0000000001"
 
-  val statuses = Seq(
+  val groupId: String = UUID.randomUUID().toString
+
+  val statuses: Seq[Int] = Seq(
     CONTINUE,
     SWITCHING_PROTOCOLS,
     OK,

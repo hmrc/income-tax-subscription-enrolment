@@ -21,7 +21,7 @@ import models.EnrolmentDetails
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import stubs.EnrolmentStoreProxyStubs.stubEnrolmentStoreProxy
+import stubs.EnrolmentStoreProxyStubs.{stubES1, stubES6}
 
 import java.util.UUID
 
@@ -35,7 +35,7 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
     mtdbsa = mtdbsa
   )
 
-  override def overriddenConfig: Map[String, String] = Map(
+  override def overriddenConfig(): Map[String, String] = Map(
     "microservice.services.enrolment-store-proxy.host" -> mockHost,
     "microservice.services.enrolment-store-proxy.port" -> mockPort
   )
@@ -44,7 +44,8 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
 
   "enrol" should {
     "respond with 201 status" in {
-      stubEnrolmentStoreProxy(appConfig, mtdbsa)
+      stubES6(appConfig, mtdbsa)
+      stubES1(appConfig, utr, groupId)
       val response = await(
         buildClient("/enrol")
           .withHttpHeaders("correlationId" -> correlationId)
