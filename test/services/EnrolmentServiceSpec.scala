@@ -65,6 +65,9 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       result match {
         case Right(outcomes) =>
           outcomes mustBe expected
+          verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
+          verify(mockConnector, times(1)).getAllocatedEnrolments(any())(any())
+          verify(mockConnector, times(1)).getUserIds(any())(any())
         case Left(_) =>
           fail()
       }
@@ -82,6 +85,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       ))
       verify(mockConnector, times(1)).upsertEnrolment(any(), any())(any())
       verify(mockConnector, times(0)).getAllocatedEnrolments(any())(any())
+      verify(mockConnector, times(0)).getUserIds(any())(any())
     }
 
     "return failure without error if other APIs fail" in {

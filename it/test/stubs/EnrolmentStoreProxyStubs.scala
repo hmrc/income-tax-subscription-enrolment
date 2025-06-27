@@ -20,6 +20,7 @@ import config.AppConfig
 import connectors.EnrolmentKey
 import play.api.http.Status
 import play.api.http.Status.OK
+import play.api.libs.json.Json
 import uk.gov.hmrc.http.StringContextOps
 
 import java.net.URL
@@ -41,9 +42,10 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
       serviceName = "IR-SA",
       identifiers = "UTR" -> utr
     )
+    val json = Json.obj("principalGroupIds" -> Json.arr(groupId))
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/groups?type=principal"
     when(method = GET, uri = url.toLocal)
-      .thenReturn(OK, s"{\"principalGroupIds\":[\"$groupId\"]}")
+      .thenReturn(OK, json)
   }
 
   def stubES0(appConfig: AppConfig, utr: String, userIds: Set[String]): Unit = {
@@ -51,10 +53,10 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
       serviceName = "IR-SA",
       identifiers = "UTR" -> utr
     )
-    val users = userIds.map(id => s"\"$id\"").mkString(",")
+    val json = Json.obj("principalUserIds" -> userIds)
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/users"
     when(method = GET, uri = url.toLocal)
-      .thenReturn(OK, s"{\"principalUserIds\":[$users]}")
+      .thenReturn(OK, json)
   }
 
   implicit class StubURL(url: URL) {

@@ -54,6 +54,7 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
       )
 
       response.status shouldBe CREATED
+      response.body.contains("Failure") shouldBe false
     }
   }
 }
