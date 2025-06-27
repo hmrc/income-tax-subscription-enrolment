@@ -42,11 +42,15 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
 
   private val correlationId = UUID.randomUUID().toString
 
+  private def setup(apiToFail: String = ""): Unit = {
+    stubES6(apiToFail == "ES6", appConfig, mtdbsa)
+    stubES1(apiToFail == "ES1", appConfig, utr, groupId)
+    stubES0(apiToFail == "ES0", appConfig, utr, userIds)
+  }
+
   "enrol" should {
-    "respond with 201 status" in {
-      stubES6(appConfig, mtdbsa)
-      stubES1(appConfig, utr, groupId)
-      stubES0(appConfig, utr, userIds)
+    "respond with 201 status if all APIs succeed" in {
+      setup()
       val response = await(
         buildClient("/enrol")
           .withHttpHeaders("correlationId" -> correlationId)
@@ -56,5 +60,33 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
       response.status shouldBe CREATED
       response.body.contains("Failure") shouldBe false
     }
+
+    "respond with an error if one of the APIs fails" in {
+      apis.foreach { apiToFail =>
+        setup(apiToFail)
+        info(s"Failing: [$apiToFail]")
+        val response = await(
+          buildClient("/enrol")
+            .withHttpHeaders("correlationId" -> correlationId)
+            .post(Json.toJson(validEnrolmentDetails))
+        )
+
+        val status = apiToFail match {
+          case "ES6" => UNPROCESSABLE_ENTITY
+          case _ => CREATED
+        }
+
+        response.status shouldBe status
+        if (status == CREATED) {
+          response.body.contains("Failure") shouldBe true
+        }
+      }
+    }
   }
+
+  private val apis = Seq(
+    "ES6",
+    "ES1",
+    "ES0"
+  )
 }

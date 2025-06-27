@@ -27,33 +27,39 @@ import java.net.URL
 
 object EnrolmentStoreProxyStubs extends WireMockMethods {
 
-  def stubES6(appConfig: AppConfig, mtdbsa: String): Unit = {
+  def stubES6(fail: Boolean, appConfig: AppConfig, mtdbsa: String): Unit = {
     val enrolmentKey = EnrolmentKey(
       serviceName = "HMRC-MTD-IT",
       identifiers = "MTDITID" -> mtdbsa
     )
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}"
     when(method = PUT, uri = url.toLocal)
-      .thenReturn(Status.NO_CONTENT)
+      .thenReturn(if (fail) Status.OK else Status.NO_CONTENT)
   }
 
-  def stubES1(appConfig: AppConfig, utr: String, groupId: String): Unit = {
+  def stubES1(fail: Boolean, appConfig: AppConfig, utr: String, groupId: String): Unit = {
     val enrolmentKey = EnrolmentKey(
       serviceName = "IR-SA",
       identifiers = "UTR" -> utr
     )
-    val json = Json.obj("principalGroupIds" -> Json.arr(groupId))
+    val json = fail match {
+      case false => Json.obj("principalGroupIds" -> Json.arr(groupId))
+      case true  => Json.obj()
+    }
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/groups?type=principal"
     when(method = GET, uri = url.toLocal)
       .thenReturn(OK, json)
   }
 
-  def stubES0(appConfig: AppConfig, utr: String, userIds: Set[String]): Unit = {
+  def stubES0(fail: Boolean, appConfig: AppConfig, utr: String, userIds: Set[String]): Unit = {
     val enrolmentKey = EnrolmentKey(
       serviceName = "IR-SA",
       identifiers = "UTR" -> utr
     )
-    val json = Json.obj("principalUserIds" -> userIds)
+    val json = fail match {
+      case false => Json.obj("principalUserIds" -> userIds)
+      case true  => Json.obj()
+    }
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/users"
     when(method = GET, uri = url.toLocal)
       .thenReturn(OK, json)
