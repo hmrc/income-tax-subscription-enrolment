@@ -18,7 +18,7 @@ package services
 
 import cats.data.EitherT
 import connectors.EnrolmentStoreProxyConnector
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import models.{EnrolmentError, Outcome}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
@@ -40,8 +40,9 @@ class EnrolmentService @Inject()(
     for {
       resultES6 <- upsertEnrolmentAllocation(result, mtdbsa, nino)
       resultES1 <- getGroupIdForEnrolment(resultES6, utr, nino)
+      resultES0 <- getUserIdsForEnrolment(resultES1, utr, nino)
     } yield {
-      resultES1.outcomes
+      resultES0.outcomes
     }
   }.value
 
@@ -79,16 +80,34 @@ class EnrolmentService @Inject()(
     EitherT {
       val location = "getGroupIdForEnrolment"
       enrolmentStoreProxyConnector.getAllocatedEnrolments(utr) map {
-        case Right(EnrolmentSuccess) =>
-          val message = "Enrolment not allocated"
-          logError(location, nino, message)
-          Left(Failure(
-            outcomes = outcomes :+ Outcome.failure(apiName, message)
-          ))
         case Right(EnrolmentAllocated(groupId)) =>
           Right(SuccessES1(
             outcomes = outcomes :+ Outcome.success(apiName),
             groupId = groupId
+          ))
+        case Left(EnrolmentFailure(_, message)) =>
+          logError(location, nino, message)
+          Left(Failure(
+            outcomes = outcomes :+ Outcome.failure(apiName, message)
+          ))
+      }
+    }
+  }
+
+  private def getUserIdsForEnrolment(
+    result: SuccessES1,
+    utr: String,
+    nino: String
+  )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES0] = {
+    val apiName = "ES0"
+    val outcomes = result.outcomes
+    EitherT {
+      val location = "getUserIdsForEnrolment"
+      enrolmentStoreProxyConnector.getUserIds(utr) map {
+        case Right(UsersFound(userIds)) =>
+          Right(SuccessES0(
+            outcomes = outcomes :+ Outcome.success(apiName),
+            userIds = userIds
           ))
         case Left(EnrolmentFailure(_, message)) =>
           logError(location, nino, message)
@@ -112,14 +131,14 @@ case class SuccessES6(
   outcomes: Seq[Outcome]
 ) extends Success
 
-case class ServiceSuccessOther(
-  outcomes: Seq[Outcome],
-  data: String
-) extends Success
-
 case class SuccessES1(
   outcomes: Seq[Outcome],
   groupId: String
+) extends Success
+
+case class SuccessES0(
+  outcomes: Seq[Outcome],
+  userIds: Set[String]
 ) extends Success
 
 case class Failure(
