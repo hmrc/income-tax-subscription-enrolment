@@ -44,9 +44,7 @@ object EnrolmentStoreParsers {
         case OK =>
           (response.json \ "principalGroupIds" \ 0).validate[String] match {
             case JsSuccess(groupId, _) => Right(EnrolmentAllocated(groupId))
-            case error =>
-              println(error)
-              jsonError
+            case _ => jsonError
           }
         case _ => error(response)
       }
