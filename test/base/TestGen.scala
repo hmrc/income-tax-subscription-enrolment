@@ -34,6 +34,6 @@ trait TestGen {
     }
   }
 
-  val randomString: String =
+  def randomString: String =
     addCharTo("")
 }

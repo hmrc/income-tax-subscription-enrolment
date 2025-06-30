@@ -17,6 +17,7 @@
 package base
 
 import play.api.http.Status._
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.ControllerComponents
 import play.api.test.Helpers
 import uk.gov.hmrc.http.HeaderCarrier
@@ -100,4 +101,11 @@ trait TestData {
     INSUFFICIENT_STORAGE,
     NETWORK_AUTHENTICATION_REQUIRED,
   )
+
+  case class Cred(
+    userId: String,
+    credentialRole: String
+  )
+
+  implicit val format: OFormat[Cred] = Json.format[Cred]
 }
