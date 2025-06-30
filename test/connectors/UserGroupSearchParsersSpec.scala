@@ -18,7 +18,7 @@ package connectors
 
 import base.{TestData, TestGen}
 import connectors.UserGroupSearchParsers.GetUsersForGroupsHttpReads
-import connectors.UsersGroupsSearchConnector.{InvalidJson, GroupUsersFound}
+import connectors.UsersGroupsSearchConnector.{GroupUsersFound, InvalidJson, UsersGroupsSearchConnectionFailure}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -61,6 +61,14 @@ class UserGroupSearchParsersSpec extends AnyWordSpec with Matchers with TestData
         )
         val actual = GetUsersForGroupsHttpReads.read("", "", response)
         actual mustBe Left(InvalidJson)
+      }
+
+      "return error if incorrect status code" in {
+        val response = HttpResponse(
+          status = statuses.filter(_ != NON_AUTHORITATIVE_INFORMATION).random,
+        )
+        val actual = GetUsersForGroupsHttpReads.read("", "", response)
+        actual mustBe Left(UsersGroupsSearchConnectionFailure(response.status))
       }
     }
   }

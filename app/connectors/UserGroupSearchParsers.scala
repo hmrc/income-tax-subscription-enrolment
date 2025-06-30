@@ -47,7 +47,7 @@ object UserGroupSearchParsers {
           case JsSuccess(users, _) =>
             val userIds = users.toMap.filter { case (_, c) => c == User }.keySet.toSeq
             Right(GroupUsersFound(userIds))
-          case error => println(error); Left(InvalidJson)
+          case _ => Left(InvalidJson)
         }
         case status => Left(UsersGroupsSearchConnectionFailure(status))
       }
