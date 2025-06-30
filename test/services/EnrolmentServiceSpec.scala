@@ -157,8 +157,8 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   private def failUGS: String = {
     when(mockGroupConnector.getUsersForGroup(any())(any())).thenReturn(
-      Future.successful(Left(InvalidJson))
+      Future.successful(Right(GroupUsersFound(Seq.empty)))
     )
-    "Invalid JSON in response"
+    s"No ADMIN users for group: $groupId"
   }
 }
