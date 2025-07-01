@@ -32,6 +32,12 @@ class AppConfig @Inject()(
   private lazy val enrolmentStoreProxyUrl: String =
     config.baseUrl("enrolment-store-proxy") + "/enrolment-store-proxy/enrolment-store"
 
+  private lazy val usersGroupsSearchUrl: String =
+    config.baseUrl("users-groups-search")
+
   lazy val enrolmentEnrolmentStoreUrl: String =
     s"$enrolmentStoreProxyUrl/enrolments"
+
+  def usersForGroupUrl(groupId: String): String =
+    s"$usersGroupsSearchUrl/users-groups-search/groups/$groupId/users"
 }

@@ -22,6 +22,7 @@ import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import stubs.EnrolmentStoreProxyStubs.{stubES0, stubES1, stubES6}
+import stubs.UsersGroupSearchStubs.stubUGS
 
 import java.util.UUID
 
@@ -37,7 +38,9 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
 
   override def overriddenConfig(): Map[String, String] = Map(
     "microservice.services.enrolment-store-proxy.host" -> mockHost,
-    "microservice.services.enrolment-store-proxy.port" -> mockPort
+    "microservice.services.enrolment-store-proxy.port" -> mockPort,
+    "microservice.services.users-groups-search.host" -> mockHost,
+    "microservice.services.users-groups-search.port" -> mockPort
   )
 
   private val correlationId = UUID.randomUUID().toString
@@ -46,6 +49,7 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
     stubES6(apiToFail == "ES6", appConfig, mtdbsa)
     stubES1(apiToFail == "ES1", appConfig, utr, groupId)
     stubES0(apiToFail == "ES0", appConfig, utr, userIds)
+    stubUGS(apiToFail == "UGS", appConfig, groupId, userIds.toSeq)
   }
 
   "enrol" should {
@@ -87,6 +91,7 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
   private val apis = Seq(
     "ES6",
     "ES1",
-    "ES0"
+    "ES0",
+    "UGS"
   )
 }
