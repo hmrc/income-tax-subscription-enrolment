@@ -18,7 +18,7 @@ package services
 
 import base.TestData
 import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
-import connectors.UsersGroupsSearchConnector.GroupUsersFound
+import connectors.UsersGroupsSearchConnector.{GroupUsersFound, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
@@ -27,7 +27,7 @@ import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar.mock
-import play.api.http.Status.SERVICE_UNAVAILABLE
+import play.api.http.Status.{NO_CONTENT, SERVICE_UNAVAILABLE}
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -113,25 +113,16 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       }
     }
 
-    "return unexpected error if result unexpected" in {
-      Seq("ES1", "ES0").foreach { api =>
+    "return error if result unexpected" in {
+      otherAPIs.foreach { api =>
         setup();
-        api match {
-          case "ES1" =>
-            when(mockEnrolConnector.getAllocatedEnrolments(any())(any())).thenReturn(
-              Future.successful(Right(EnrolmentSuccess))
-            )
-          case "ES0" =>
-            when(mockEnrolConnector.getUserIds(any())(any())).thenReturn(
-              Future.successful(Right(EnrolmentSuccess))
-            )
-        }
+        val message = unexpected(api)
         val result = await(service.enrol(utr, nino, mtdbsa))
         result match {
           case Right(_) => fail()
           case Left(failure) if failure.error.isEmpty =>
             val last = failure.outcomes.last
-            last.status.contains("Unexpected") mustBe true
+            last.status.contains(message) mustBe true
           case _ => fail()
         }
       }
@@ -184,5 +175,39 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       Future.successful(Right(GroupUsersFound(Seq.empty)))
     )
     s"No ADMIN users for group: $groupId"
+  }
+
+  private def unexpected(api: String): String = {
+    val message = api match {
+      case "ES1" => unexpectedES1
+      case "ES0" => unexpectedES0
+      case "UGS" => unexpectedUGS
+      case _ =>
+        throw new Exception(s"Unknown API: $api")
+    }
+    info(s"Failing [$api]")
+    message
+  }
+
+  private def unexpectedES1: String = {
+    when(mockEnrolConnector.getAllocatedEnrolments(any())(any())).thenReturn(
+      Future.successful(Right(EnrolmentSuccess))
+    )
+    "Unexpected"
+  }
+
+  private def unexpectedES0: String = {
+    when(mockEnrolConnector.getUserIds(any())(any())).thenReturn(
+      Future.successful(Right(EnrolmentSuccess))
+    )
+    "Unexpected"
+  }
+
+  private def unexpectedUGS: String = {
+    val status = NO_CONTENT
+    when(mockGroupConnector.getUsersForGroup(any())(any())).thenReturn(
+      Future.successful(Left(UsersGroupsSearchConnectionFailure(status)))
+    )
+    s"$status"
   }
 }
