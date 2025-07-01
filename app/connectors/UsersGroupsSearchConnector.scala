@@ -19,9 +19,8 @@ package connectors
 import com.google.inject.Singleton
 import config.AppConfig
 import connectors.UsersGroupsSearchConnector.GetUsersForGroupResponse
-import uk.gov.hmrc.auth.core.CredentialRole
-import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 import uk.gov.hmrc.http.client.HttpClientV2
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}

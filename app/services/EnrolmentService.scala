@@ -17,9 +17,9 @@
 package services
 
 import cats.data.EitherT
-import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, UsersFound}
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, InvalidJson, UsersGroupsSearchConnectionFailure}
+import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}
 import play.api.Logging
 import uk.gov.hmrc.http.HeaderCarrier
@@ -51,6 +51,19 @@ class EnrolmentService @Inject()(
 
   private def logError(location: String, nino: String, detail: String): Unit = {
     logger.error(s"[EnrolmentService][$location] - Auto enrolment failed for nino: $nino - $detail")
+  }
+
+  private def unexpectedResponse(
+    apiName: String,
+    outcomes: Seq[Outcome],
+    location: String,
+    nino: String
+  ) = {
+    val message = "Unexpected response"
+    logError(location, nino, message)
+    Left(Failure(
+      outcomes = outcomes :+ Outcome.failure(apiName, message)
+    ))
   }
 
   private def upsertEnrolmentAllocation(
@@ -93,6 +106,12 @@ class EnrolmentService @Inject()(
           Left(Failure(
             outcomes = outcomes :+ Outcome.failure(apiName, message)
           ))
+        case _ => unexpectedResponse(
+          apiName = apiName,
+          outcomes = outcomes,
+          location = location,
+          nino = nino
+        )
       }
     }
   }
@@ -117,6 +136,12 @@ class EnrolmentService @Inject()(
           Left(Failure(
             outcomes = outcomes :+ Outcome.failure(apiName, message)
           ))
+        case _ => unexpectedResponse(
+          apiName = apiName,
+          outcomes = outcomes,
+          location = location,
+          nino = nino
+        )
       }
     }
   }

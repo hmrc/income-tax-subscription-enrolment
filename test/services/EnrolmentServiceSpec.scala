@@ -112,6 +112,30 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
         }
       }
     }
+
+    "return unexpected error if result unexpected" in {
+      Seq("ES1", "ES0").foreach { api =>
+        setup();
+        api match {
+          case "ES1" =>
+            when(mockEnrolConnector.getAllocatedEnrolments(any())(any())).thenReturn(
+              Future.successful(Right(EnrolmentSuccess))
+            )
+          case "ES0" =>
+            when(mockEnrolConnector.getUserIds(any())(any())).thenReturn(
+              Future.successful(Right(EnrolmentSuccess))
+            )
+        }
+        val result = await(service.enrol(utr, nino, mtdbsa))
+        result match {
+          case Right(_) => fail()
+          case Left(failure) if failure.error.isEmpty =>
+            val last = failure.outcomes.last
+            last.status.contains("Unexpected") mustBe true
+          case _ => fail()
+        }
+      }
+    }
   }
 
   implicit class Converter(response: EnrolmentFailure) {
