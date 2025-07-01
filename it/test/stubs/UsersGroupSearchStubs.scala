@@ -34,7 +34,7 @@ object UsersGroupSearchStubs {
       )})
       case true  => Json.obj()
     }
-    val url = url"${appConfig.usersForGroupUrl.replace("{}", groupId)}"
+    val url = url"${appConfig.usersForGroupUrl(groupId)}"
     when(method = GET, uri = url.toLocal)
       .thenReturn(NON_AUTHORITATIVE_INFORMATION, json)
   }

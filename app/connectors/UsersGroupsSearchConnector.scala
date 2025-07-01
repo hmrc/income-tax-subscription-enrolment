@@ -36,7 +36,7 @@ class UsersGroupsSearchConnector @Inject()(
     groupId: String
   )(implicit hc:HeaderCarrier): Future[GetUsersForGroupResponse] = {
     import UserGroupSearchParsers._
-    val url = url"${appConfig.usersForGroupUrl.replace("{}", groupId)}"
+    val url = url"${appConfig.usersForGroupUrl(groupId)}"
     http.get(url).execute
   }
 

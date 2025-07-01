@@ -38,6 +38,6 @@ class AppConfig @Inject()(
   lazy val enrolmentEnrolmentStoreUrl: String =
     s"$enrolmentStoreProxyUrl/enrolments"
 
-  lazy val usersForGroupUrl: String =
-    s"$usersGroupsSearchUrl/users-groups-search/groups/{}/users"
+  def usersForGroupUrl(groupId: String): String =
+    s"$usersGroupsSearchUrl/users-groups-search/groups/$groupId/users"
 }
