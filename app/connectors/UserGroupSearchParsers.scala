@@ -45,7 +45,7 @@ object UserGroupSearchParsers {
       response.status match {
         case NON_AUTHORITATIVE_INFORMATION => response.json.validate[Seq[(String, CredentialRole)]] match {
           case JsSuccess(users, _) =>
-            val userIds = users.toMap.filter { case (_, c) => c == User }.keySet.toSeq
+            val userIds = users.collect { case (id, User) => id }
             Right(GroupUsersFound(userIds))
           case _ => Left(InvalidJson)
         }

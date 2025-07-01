@@ -17,12 +17,12 @@
 package services
 
 import base.TestData
-import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
-import connectors.UsersGroupsSearchConnector.{GroupUsersFound, InvalidJson}
+import connectors.UsersGroupsSearchConnector.GroupUsersFound
+import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{reset, times, validateMockitoUsage, verify, when}
+import org.mockito.Mockito.{reset, times, verify, when}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
