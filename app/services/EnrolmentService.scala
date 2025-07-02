@@ -17,6 +17,7 @@
 package services
 
 import cats.data.EitherT
+import connectors.EnrolmentStoreParsers.{EnrolFailure, EnrolSuccess}
 import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, UsersFound}
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, InvalidJson, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
@@ -40,12 +41,13 @@ class EnrolmentService @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[Failure, Seq[Outcome]]] = {
     val result = SuccessBase()
     for {
-      resultES6 <- upsertEnrolmentAllocation(result, mtdbsa, nino)
-      resultES1 <- getGroupIdForEnrolment(resultES6, utr, nino)
-      resultES0 <- getUserIdsForEnrolment(resultES1, utr, nino)
+      resultES6 <- upsertEnrolmentAllocation(result, nino, mtdbsa)
+      resultES1 <- getGroupIdForEnrolment(resultES6, nino, utr)
+      resultES0 <- getUserIdsForEnrolment(resultES1, nino, utr)
       resultUGS <- getAdminUserForGroup(resultES0, nino, resultES1.groupId, resultES0.userIds)
+      resultES8 <- allocateEnrolmentWithoutKnownFacts(resultUGS, nino, mtdbsa, resultES1.groupId, resultUGS.userId)
     } yield {
-      resultUGS.outcomes
+      resultES8.outcomes
     }
   }.value
 
@@ -68,17 +70,18 @@ class EnrolmentService @Inject()(
 
   private def upsertEnrolmentAllocation(
     result: Success,
-    mtdbsa: String,
-    nino: String
+    nino: String,
+    mtdbsa: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES6] = {
     EitherT {
+      val location = "upsertEnrolmentAllocation"
       enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
         case Right(_) =>
           Right(SuccessES6(
             outcomes = result.outcomes :+ Outcome.success("ES6")
           ))
         case Left(EnrolmentStoreProxyConnector.EnrolmentFailure(status, message)) =>
-          logError("upsertEnrolmentAllocation", nino, s"Failed to upsert enrolment with status: $status, message: $message")
+          logError(location, nino, s"Failed to upsert enrolment with status: $status, message: $message")
           Left(Failure(
             error = Some(EnrolmentError(status.toString, message)))
           )
@@ -88,8 +91,8 @@ class EnrolmentService @Inject()(
 
   private def getGroupIdForEnrolment(
     result: SuccessES6,
-    utr: String,
-    nino: String
+    nino: String,
+    utr: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES1] = {
     val apiName = "ES1"
     val outcomes = result.outcomes
@@ -118,8 +121,8 @@ class EnrolmentService @Inject()(
 
   private def getUserIdsForEnrolment(
     result: SuccessES1,
-    utr: String,
-    nino: String
+    nino: String,
+    utr: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES0] = {
     val apiName = "ES0"
     val outcomes = result.outcomes
@@ -179,6 +182,31 @@ class EnrolmentService @Inject()(
           ))
         case Left(UsersGroupsSearchConnectionFailure(status)) =>
           val message = s"Response status code: $status"
+          logError(location, nino, message)
+          Left(Failure(
+            outcomes = outcomes :+ Outcome.failure(apiName, message)
+          ))
+      }
+    }
+  }
+
+  private def allocateEnrolmentWithoutKnownFacts(
+    result: SuccessUGS,
+    nino: String,
+    mtdbsa: String,
+    groupId: String,
+    userId: String
+  )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessBase] = {
+    val apiName = "ES8"
+    val outcomes = result.outcomes
+    EitherT {
+      val location = "allocateEnrolmentWithoutKnownFacts"
+      enrolmentStoreProxyConnector.allocateEnrolmentWithoutKnownFacts(groupId = groupId, userId, mtdbsa).map {
+        case Right(EnrolSuccess) =>
+          Right(SuccessBase(
+            outcomes = outcomes :+ Outcome.success(apiName)
+          ))
+        case Left(EnrolFailure(message)) =>
           logError(location, nino, message)
           Left(Failure(
             outcomes = outcomes :+ Outcome.failure(apiName, message)

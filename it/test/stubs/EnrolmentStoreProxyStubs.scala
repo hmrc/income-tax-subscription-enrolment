@@ -65,6 +65,16 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
       .thenReturn(OK, json)
   }
 
+  def stubES8(fail: Boolean, appConfig: AppConfig, groupId: String, mtdbsa: String): Unit = {
+    val enrolmentKey = EnrolmentKey(
+      serviceName = "HMRC-MTD-IT",
+      identifiers = "MTDITID" -> mtdbsa
+    )
+    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey.asString}"
+    when(method = POST, uri = url.toLocal)
+      .thenReturn(if (fail) Status.OK else Status.CREATED)
+  }
+
   implicit class StubURL(url: URL) {
     def toLocal: String = {
       val str = url.toString
