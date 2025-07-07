@@ -16,7 +16,7 @@
 
 package connectors
 
-import connectors.EnrolmentStoreProxyConnector.{AllocateEnrolmentResponse, EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentFailure, EnrolmentResponse, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreProxyConnector.{AllocateEnrolmentResponse, AssignEnrolmentToUserResponse, EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentAssigned, EnrolmentAssignmentFailure, EnrolmentFailure, EnrolmentResponse, EnrolmentSuccess, UsersFound}
 import play.api.http.Status.{CREATED, INTERNAL_SERVER_ERROR, NO_CONTENT, OK}
 import play.api.libs.json.JsSuccess
 import uk.gov.hmrc.http.{HttpReads, HttpResponse}
@@ -67,6 +67,14 @@ object EnrolmentStoreParsers {
       response.status match {
         case CREATED => Right(EnrolSuccess)
         case _ => Left(EnrolFailure(response.body))
+      }
+  }
+
+  implicit object AssignEnrolmentToUserHttpReads extends HttpReads[AssignEnrolmentToUserResponse] {
+    override def read(method: String, url: String, response: HttpResponse): AssignEnrolmentToUserResponse =
+      response.status match {
+        case CREATED => Right(EnrolmentAssigned)
+        case status => Left(EnrolmentAssignmentFailure(status, response.body))
       }
   }
 }

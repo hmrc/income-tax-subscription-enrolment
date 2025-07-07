@@ -17,8 +17,8 @@
 package connectors
 
 import base.{TestData, TestGen}
-import connectors.EnrolmentStoreParsers.{AllocateEnrolmentResponseHttpReads, GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
-import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreParsers.{AllocateEnrolmentResponseHttpReads, AssignEnrolmentToUserHttpReads, GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
+import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentAssigned, EnrolmentAssignmentFailure, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -132,6 +132,24 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
       )
       val httpResponse = HttpResponse(status, response.message)
       val result = AllocateEnrolmentResponseHttpReads.read("", "", httpResponse)
+      result mustBe Left(response)
+    }
+  }
+
+  "AssignEnrolmentToUserHttpReads is invoked" should {
+    "return success when response is CREATED" in {
+      val httpResponse = HttpResponse(CREATED)
+      val result = AssignEnrolmentToUserHttpReads.read("", "", httpResponse)
+      result mustBe Right(EnrolmentAssigned)
+    }
+
+    "return failure when response is other than CREATED" in {
+      val response = EnrolmentAssignmentFailure(
+        status = statuses.filter(_ != CREATED).random,
+        body = randomString
+      )
+      val httpResponse = HttpResponse(response.status, response.body)
+      val result = AssignEnrolmentToUserHttpReads.read("", "", httpResponse)
       result mustBe Left(response)
     }
   }

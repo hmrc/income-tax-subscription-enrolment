@@ -102,6 +102,8 @@ object EnrolmentStoreProxyConnector {
 
   type AllocateEnrolmentResponse = Either[EnrolFailure, EnrolSuccess.type ]
 
+  type AssignEnrolmentToUserResponse = Either[EnrolmentAssignmentFailure, EnrolmentAssigned.type]
+
   sealed trait EnrolmentSuccess
 
   case object EnrolmentSuccess extends EnrolmentSuccess
@@ -115,6 +117,10 @@ object EnrolmentStoreProxyConnector {
   case object EnrolSuccess
 
   case class EnrolFailure(message: String)
+
+  case object EnrolmentAssigned
+
+  case class EnrolmentAssignmentFailure(status: Int, body: String)
 }
 
 case class EnrolmentStoreProxyVerifier(
