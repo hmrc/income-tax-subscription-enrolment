@@ -17,8 +17,7 @@
 package services
 
 import base.TestData
-import connectors.EnrolmentStoreParsers.{EnrolFailure, EnrolSuccess}
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}
@@ -68,7 +67,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   "enrol" should {
     "return success when all APIs succeed" in {
-      setup();
+      setup()
       val result = await(service.enrol(utr, nino, mtdbsa))
       val allAPIs = Seq("ES6") ++ otherAPIs
       info(s"Succeeding [${allAPIs.mkString(", ")}]")
@@ -87,7 +86,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     }
 
     "return failure with error when ES6 fails" in {
-      setup();
+      setup()
       val error = EnrolmentFailure(SERVICE_UNAVAILABLE, "")
       when(mockEnrolConnector.upsertEnrolment(any(), any())(any())).thenReturn(
         Future.successful(Left(error))
@@ -123,7 +122,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
     "return error if result unexpected" in {
       otherAPIs.foreach { api =>
-        setup();
+        setup()
         val message = unexpected(api)
         if (message != "") {
           val result = await(service.enrol(utr, nino, mtdbsa))

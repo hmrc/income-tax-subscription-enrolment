@@ -17,8 +17,7 @@
 package services
 
 import cats.data.EitherT
-import connectors.EnrolmentStoreParsers.{EnrolFailure, EnrolSuccess}
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, UsersFound}
+import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentFailure, UsersFound}
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, InvalidJson, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}

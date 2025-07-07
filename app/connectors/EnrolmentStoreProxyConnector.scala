@@ -17,11 +17,10 @@
 package connectors
 
 import config.AppConfig
-import connectors.EnrolmentStoreParsers.AllocateEnrolmentResponse
-import connectors.EnrolmentStoreProxyConnector.EnrolmentResponse
-import play.api.libs.json.{JsObject, Json, OFormat}
+import connectors.EnrolmentStoreProxyConnector.{AllocateEnrolmentResponse, EnrolmentResponse}
+import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -101,6 +100,8 @@ object EnrolmentStoreProxyConnector {
 
   type EnrolmentResponse = Either[EnrolmentFailure, EnrolmentSuccess]
 
+  type AllocateEnrolmentResponse = Either[EnrolFailure, EnrolSuccess.type ]
+
   sealed trait EnrolmentSuccess
 
   case object EnrolmentSuccess extends EnrolmentSuccess
@@ -110,6 +111,10 @@ object EnrolmentStoreProxyConnector {
   case class UsersFound(users: Set[String]) extends EnrolmentSuccess
 
   case class EnrolmentFailure(status: Int, message: String)
+
+  case object EnrolSuccess
+
+  case class EnrolFailure(message: String)
 }
 
 case class EnrolmentStoreProxyVerifier(

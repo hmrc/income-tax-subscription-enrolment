@@ -17,8 +17,8 @@
 package connectors
 
 import base.{TestData, TestGen}
-import connectors.EnrolmentStoreParsers.{AllocateEnrolmentResponseHttpReads, EnrolFailure, EnrolSuccess, GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreParsers.{AllocateEnrolmentResponseHttpReads, GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
+import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
