@@ -17,7 +17,7 @@
 package connectors
 
 import config.AppConfig
-import connectors.EnrolmentStoreProxyConnector.{AllocateEnrolmentResponse, EnrolmentResponse}
+import connectors.EnrolmentStoreProxyConnector.{AllocateEnrolmentResponse, AssignEnrolmentToUserResponse, EnrolmentResponse}
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
@@ -93,6 +93,19 @@ class EnrolmentStoreProxyConnector @Inject()(
     http.post(url).withBody(
       body = requestBody
     ).execute
+  }
+
+  def assignEnrolment(
+    userId: String,
+    mtdbsa: String
+  )(implicit hc: HeaderCarrier): Future[AssignEnrolmentToUserResponse] = {
+    val enrolmentKey = EnrolmentKey(
+      serviceName = "HMRC-MTD-IT",
+      identifiers = "MTDITID" -> mtdbsa
+    )
+    val url = url"${appConfig.assignEnrolmentUrl(userId)}/${enrolmentKey.asString}"
+    import connectors.EnrolmentStoreParsers.AssignEnrolmentToUserHttpReads
+    http.post(url).execute
   }
 }
 

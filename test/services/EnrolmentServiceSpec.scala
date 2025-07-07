@@ -17,7 +17,7 @@
 package services
 
 import base.TestData
-import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentAssigned, EnrolmentAssignmentFailure, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}
@@ -63,6 +63,9 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     when(mockEnrolConnector.allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())).thenReturn(
       Future.successful(Right(EnrolSuccess))
     )
+    when(mockEnrolConnector.assignEnrolment(any(), any())(any())).thenReturn(
+      Future.successful(Right(EnrolmentAssigned))
+    )
   }
 
   "enrol" should {
@@ -80,6 +83,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
           verify(mockEnrolConnector, times(1)).getUserIds(any())(any())
           verify(mockGroupConnector, times(1)).getUsersForGroup(any())(any())
           verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
+          verify(mockEnrolConnector, times(2)).assignEnrolment(any(), any())(any())
         case Left(_) =>
           fail()
       }
@@ -100,6 +104,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       verify(mockEnrolConnector, times(0)).getUserIds(any())(any())
       verify(mockGroupConnector, times(0)).getUsersForGroup(any())(any())
       verify(mockEnrolConnector, times(0)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
+      verify(mockEnrolConnector, times(0)).assignEnrolment(any(), any())(any())
     }
 
     "return failure without error if other APIs fail" in {
@@ -149,15 +154,17 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     "ES1",
     "ES0",
     "UGS",
-    "ES8"
+    "ES8",
+    "ES11"
   )
 
   private def failAPI(api: String): String = {
     val message = api match {
-      case "ES1" => failES1
-      case "ES0" => failES0
-      case "UGS" => failUGS
-      case "ES8" => failES8
+      case "ES1"  => failES1
+      case "ES0"  => failES0
+      case "UGS"  => failUGS
+      case "ES8"  => failES8
+      case "ES11" => failES11
       case _ =>
         throw new Exception(s"Unknown API: $api")
     }
@@ -196,12 +203,21 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     message
   }
 
+  private def failES11: String = {
+    val message = s"Error allocating enrolment to: [${userIds.mkString(", ")}]"
+    when(mockEnrolConnector.assignEnrolment(any(), any())(any())).thenReturn(
+      Future.successful(Left(EnrolmentAssignmentFailure(SERVICE_UNAVAILABLE, "")))
+    )
+    message
+  }
+
   private def unexpected(api: String): String = {
     val message = api match {
-      case "ES1" => unexpectedES1
-      case "ES0" => unexpectedES0
-      case "UGS" => unexpectedUGS
-      case "ES8" => ""
+      case "ES1"  => unexpectedES1
+      case "ES0"  => unexpectedES0
+      case "UGS"  => unexpectedUGS
+      case "ES8"  => ""
+      case "ES11" => ""
       case _ =>
         throw new Exception(s"Unknown API: $api")
     }
