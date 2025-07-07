@@ -45,6 +45,5 @@ class AppConfig @Inject()(
     s"$enrolmentStoreProxyUrl/groups/$groupId/enrolments"
 
   def assignEnrolmentUrl(userId: String): String =
-    s"$enrolmentStoreProxyUrl/users/$userId/enrolments" +
-      s""
+    s"$enrolmentStoreProxyUrl/users/$userId/enrolments"
 }
