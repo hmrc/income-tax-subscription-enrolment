@@ -45,7 +45,7 @@ class EnrolmentService @Inject()(
       resultES0  <- getUserIdsForEnrolment(resultES1, nino, utr)
       resultUGS  <- getAdminUserForGroup(resultES0, nino, resultES1.groupId, resultES0.userIds)
       resultES8  <- allocateEnrolmentWithoutKnownFacts(resultUGS, nino, mtdbsa, resultES1.groupId, resultUGS.userId)
-      resultES11 <- assignEnrolment(resultES8, nino, resultES0.userIds, mtdbsa)
+      resultES11 <- assignEnrolment(resultES8, nino, resultES0.userIds, resultUGS.userId, mtdbsa)
     } yield {
       resultES11.outcomes
     }
@@ -218,31 +218,41 @@ class EnrolmentService @Inject()(
   private def assignEnrolment(
     result: SuccessBase,
     nino: String,
-    userIds: Seq[String],
+    allUsers: Seq[String],
+    adminUser: String,
     mtdbsa: String,
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessBase] = {
     val apiName = "ES11"
     val outcomes = result.outcomes
+    val userIds = allUsers.filter(_ != adminUser)
     EitherT {
-      val location = "assignEnrolment"
-      Future.sequence {
-        userIds.map { userId =>
-          enrolmentStoreProxyConnector.assignEnrolment(userId, mtdbsa)
-        }
-      } map { userIdResponses =>
-        if (userIdResponses.forall(_.isRight)) {
+      if (userIds.isEmpty) {
+        Future.successful(true).map { _ =>
           Right(SuccessBase(
             outcomes = outcomes :+ Outcome.success(apiName)
           ))
-        } else {
-          val failed: Seq[String] = (userIds zip userIdResponses).collect {
-            case (userId, response) if response.isLeft => userId
+        }
+      } else {
+        val location = "assignEnrolment"
+        Future.sequence {
+          userIds.map { userId =>
+            enrolmentStoreProxyConnector.assignEnrolment(userId, mtdbsa)
           }
-          val message = s"Error allocating enrolment to: [${failed.mkString(", ")}]"
-          logError(location, nino, message)
-          Left(Failure(
-            outcomes = outcomes :+ Outcome.failure(apiName, message)
-          ))
+        } map { userIdResponses =>
+          if (userIdResponses.forall(_.isRight)) {
+            Right(SuccessBase(
+              outcomes = outcomes :+ Outcome.success(apiName)
+            ))
+          } else {
+            val failed: Seq[String] = (userIds zip userIdResponses).collect {
+              case (userId, response) if response.isLeft => userId
+            }
+            val message = s"Error allocating enrolment to: [${failed.mkString(", ")}]"
+            logError(location, nino, message)
+            Left(Failure(
+              outcomes = outcomes :+ Outcome.failure(apiName, message)
+            ))
+          }
         }
       }
     }

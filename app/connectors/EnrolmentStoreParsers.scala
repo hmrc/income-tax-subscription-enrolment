@@ -55,7 +55,7 @@ object EnrolmentStoreParsers {
       response.status match {
         case OK =>
           (response.json \ "principalUserIds").validate[Set[String]] match {
-            case JsSuccess(userIds, _) => Right(UsersFound(userIds))
+            case JsSuccess(userIds, _) => Right(UsersFound(userIds.toSeq))
             case _ => jsonError
           }
         case _ => error(response)

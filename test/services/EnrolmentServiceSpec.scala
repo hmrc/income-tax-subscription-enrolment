@@ -58,7 +58,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       Future.successful(Right(UsersFound(userIds)))
     )
     when(mockGroupConnector.getUsersForGroup(any())(any)).thenReturn(
-      Future.successful(Right(GroupUsersFound(userIds.toSeq)))
+      Future.successful(Right(GroupUsersFound(userIds)))
     )
     when(mockEnrolConnector.allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())).thenReturn(
       Future.successful(Right(EnrolSuccess))
@@ -83,7 +83,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
           verify(mockEnrolConnector, times(1)).getUserIds(any())(any())
           verify(mockGroupConnector, times(1)).getUsersForGroup(any())(any())
           verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
-          verify(mockEnrolConnector, times(2)).assignEnrolment(any(), any())(any())
+          verify(mockEnrolConnector, times(1)).assignEnrolment(any(), any())(any())
         case Left(_) =>
           fail()
       }
@@ -204,7 +204,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   }
 
   private def failES11: String = {
-    val message = s"Error allocating enrolment to: [${userIds.mkString(", ")}]"
+    val message = s"Error allocating enrolment to: [${userIds.last}]"
     when(mockEnrolConnector.assignEnrolment(any(), any())(any())).thenReturn(
       Future.successful(Left(EnrolmentAssignmentFailure(SERVICE_UNAVAILABLE, "")))
     )

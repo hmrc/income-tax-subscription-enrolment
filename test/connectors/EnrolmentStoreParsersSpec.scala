@@ -86,7 +86,7 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
     "return success with 'userIds' when response is OK and contains valid JSON" in {
       val userId1 = randomString
       val userId2 = randomString
-      val response = UsersFound(Set(userId1, userId2))
+      val response = UsersFound(Seq(userId1, userId2))
       val httpResponse = HttpResponse(
         status = OK,
         headers = Map("content-type" -> Seq("application/json")),

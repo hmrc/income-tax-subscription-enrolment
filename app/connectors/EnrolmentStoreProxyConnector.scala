@@ -123,7 +123,7 @@ object EnrolmentStoreProxyConnector {
 
   case class EnrolmentAllocated(groupID: String) extends EnrolmentSuccess
 
-  case class UsersFound(users: Set[String]) extends EnrolmentSuccess
+  case class UsersFound(users: Seq[String]) extends EnrolmentSuccess
 
   case class EnrolmentFailure(status: Int, message: String)
 

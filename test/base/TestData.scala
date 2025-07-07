@@ -42,7 +42,7 @@ trait TestData {
 
   val groupId: String = UUID.randomUUID().toString
 
-  val userIds: Set[String] = Set(
+  val userIds: Seq[String] = Seq(
     UUID.randomUUID().toString,
     UUID.randomUUID().toString
   )

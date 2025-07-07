@@ -51,7 +51,7 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
       .thenReturn(OK, json)
   }
 
-  def stubES0(fail: Boolean, appConfig: AppConfig, utr: String, userIds: Set[String]): Unit = {
+  def stubES0(fail: Boolean, appConfig: AppConfig, utr: String, userIds: Seq[String]): Unit = {
     val enrolmentKey = EnrolmentKey(
       serviceName = "IR-SA",
       identifiers = "UTR" -> utr
@@ -75,7 +75,7 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
       .thenReturn(if (fail) Status.OK else Status.CREATED)
   }
 
-  def stubES11(fail: Boolean, appConfig: AppConfig, userIds: Set[String], mtdbsa: String): Unit = {
+  def stubES11(fail: Boolean, appConfig: AppConfig, userIds: Seq[String], mtdbsa: String): Unit = {
     val enrolmentKey = EnrolmentKey(
       serviceName = "HMRC-MTD-IT",
       identifiers = "MTDITID" -> mtdbsa
