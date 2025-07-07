@@ -21,7 +21,7 @@ import models.EnrolmentDetails
 import play.api.http.Status._
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
-import stubs.EnrolmentStoreProxyStubs.{stubES0, stubES1, stubES6}
+import stubs.EnrolmentStoreProxyStubs.{stubES0, stubES1, stubES6, stubES8}
 import stubs.UsersGroupSearchStubs.stubUGS
 
 import java.util.UUID
@@ -50,6 +50,7 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
     stubES1(apiToFail == "ES1", appConfig, utr, groupId)
     stubES0(apiToFail == "ES0", appConfig, utr, userIds)
     stubUGS(apiToFail == "UGS", appConfig, groupId, userIds.toSeq)
+    stubES8(apiToFail == "ES8", appConfig, groupId, mtdbsa)
   }
 
   "enrol" should {
@@ -92,6 +93,7 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
     "ES6",
     "ES1",
     "ES0",
-    "UGS"
+    "UGS",
+    "ES8"
   )
 }

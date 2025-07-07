@@ -17,6 +17,7 @@
 package services
 
 import base.TestData
+import connectors.EnrolmentStoreParsers.{EnrolFailure, EnrolSuccess}
 import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
@@ -60,6 +61,9 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     when(mockGroupConnector.getUsersForGroup(any())(any)).thenReturn(
       Future.successful(Right(GroupUsersFound(userIds.toSeq)))
     )
+    when(mockEnrolConnector.allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())).thenReturn(
+      Future.successful(Right(EnrolSuccess))
+    )
   }
 
   "enrol" should {
@@ -75,6 +79,8 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
           verify(mockEnrolConnector, times(1)).upsertEnrolment(any(), any())(any())
           verify(mockEnrolConnector, times(1)).getAllocatedEnrolments(any())(any())
           verify(mockEnrolConnector, times(1)).getUserIds(any())(any())
+          verify(mockGroupConnector, times(1)).getUsersForGroup(any())(any())
+          verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
         case Left(_) =>
           fail()
       }
@@ -93,6 +99,8 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       verify(mockEnrolConnector, times(1)).upsertEnrolment(any(), any())(any())
       verify(mockEnrolConnector, times(0)).getAllocatedEnrolments(any())(any())
       verify(mockEnrolConnector, times(0)).getUserIds(any())(any())
+      verify(mockGroupConnector, times(0)).getUsersForGroup(any())(any())
+      verify(mockEnrolConnector, times(0)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
     }
 
     "return failure without error if other APIs fail" in {
@@ -117,13 +125,15 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       otherAPIs.foreach { api =>
         setup();
         val message = unexpected(api)
-        val result = await(service.enrol(utr, nino, mtdbsa))
-        result match {
-          case Right(_) => fail()
-          case Left(failure) if failure.error.isEmpty =>
-            val last = failure.outcomes.last
-            last.status.contains(message) mustBe true
-          case _ => fail()
+        if (message != "") {
+          val result = await(service.enrol(utr, nino, mtdbsa))
+          result match {
+            case Right(_) => fail()
+            case Left(failure) if failure.error.isEmpty =>
+              val last = failure.outcomes.last
+              last.status.contains(message) mustBe true
+            case _ => fail()
+          }
         }
       }
     }
@@ -139,7 +149,8 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   private val otherAPIs = Seq(
     "ES1",
     "ES0",
-    "UGS"
+    "UGS",
+    "ES8"
   )
 
   private def failAPI(api: String): String = {
@@ -147,6 +158,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       case "ES1" => failES1
       case "ES0" => failES0
       case "UGS" => failUGS
+      case "ES8" => failES8
       case _ =>
         throw new Exception(s"Unknown API: $api")
     }
@@ -177,15 +189,26 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     s"No ADMIN users for group: $groupId"
   }
 
+  private def failES8: String = {
+    val message = "Service unavailable"
+    when(mockEnrolConnector.allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())).thenReturn(
+      Future.successful(Left(EnrolFailure(message)))
+    )
+    message
+  }
+
   private def unexpected(api: String): String = {
     val message = api match {
       case "ES1" => unexpectedES1
       case "ES0" => unexpectedES0
       case "UGS" => unexpectedUGS
+      case "ES8" => ""
       case _ =>
         throw new Exception(s"Unknown API: $api")
     }
-    info(s"Failing [$api]")
+    if (message != "") {
+      info(s"Failing [$api]")
+    }
     message
   }
 

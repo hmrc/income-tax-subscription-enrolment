@@ -17,10 +17,11 @@
 package connectors
 
 import config.AppConfig
+import connectors.EnrolmentStoreParsers.AllocateEnrolmentResponse
 import connectors.EnrolmentStoreProxyConnector.EnrolmentResponse
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{JsObject, Json, OFormat}
 import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, StringContextOps}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -44,7 +45,8 @@ class EnrolmentStoreProxyConnector @Inject()(
       value = nino
     )))
     import connectors.EnrolmentStoreParsers.UpsertResponseParser
-    http.put(url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}").withBody(
+    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}"
+    http.put(url).withBody(
       body = Json.toJson(requestBody)
     ).execute
   }
@@ -71,6 +73,27 @@ class EnrolmentStoreProxyConnector @Inject()(
     )
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/users"
     http.get(url).execute
+  }
+
+  def allocateEnrolmentWithoutKnownFacts(
+    groupId: String,
+    userId: String,
+    mtdbsa: String
+  )(implicit hc: HeaderCarrier): Future[AllocateEnrolmentResponse] = {
+    val enrolmentKey = EnrolmentKey(
+      serviceName = "HMRC-MTD-IT",
+      identifiers = "MTDITID" -> mtdbsa
+    )
+    val requestBody = Json.obj(
+      "userId" -> userId,
+      "type" -> "principal",
+      "action" -> "enrolAndActivate"
+    )
+    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey.asString}"
+    import connectors.EnrolmentStoreParsers.AllocateEnrolmentResponseHttpReads
+    http.post(url).withBody(
+      body = requestBody
+    ).execute
   }
 }
 

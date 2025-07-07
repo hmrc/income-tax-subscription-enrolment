@@ -17,7 +17,7 @@
 package connectors
 
 import base.{TestData, TestGen}
-import connectors.EnrolmentStoreParsers.{GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
+import connectors.EnrolmentStoreParsers.{AllocateEnrolmentResponseHttpReads, EnrolFailure, EnrolSuccess, GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
 import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
@@ -114,6 +114,24 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
       )
       val httpResponse = HttpResponse(response.status, response.message)
       val result = UserIdsResponseParser.read("", "", httpResponse)
+      result mustBe Left(response)
+    }
+  }
+
+  "AllocateEnrolmentResponseHttpReads is invoked" should {
+    "return success when response is CREATED" in {
+      val httpResponse = HttpResponse(CREATED)
+      val result = AllocateEnrolmentResponseHttpReads.read("", "", httpResponse)
+      result mustBe Right(EnrolSuccess)
+    }
+
+    "return failure when response is other than CREATED" in {
+      val status = statuses.filter(_ != CREATED).random
+      val response = EnrolFailure(
+        message = randomString
+      )
+      val httpResponse = HttpResponse(status, response.message)
+      val result = AllocateEnrolmentResponseHttpReads.read("", "", httpResponse)
       result mustBe Left(response)
     }
   }
