@@ -73,7 +73,10 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       Seq(userIds, Seq(userIds.head)).foreach { users =>
         setup(users)
         val result = await(service.enrol(utr, nino, mtdbsa))
-        val allAPIs = Seq("ES6") ++ otherAPIs
+        val allAPIs = Seq("ES6") ++ (users.size match {
+          case 2 => otherAPIs
+          case _ => otherAPIs.filter(_ != "ES11")
+        })
         info(s"Succeeding [${allAPIs.mkString(", ")}]")
         val expected = allAPIs.map(Outcome.success)
         result match {
