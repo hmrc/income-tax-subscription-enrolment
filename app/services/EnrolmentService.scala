@@ -227,11 +227,9 @@ class EnrolmentService @Inject()(
     val userIds = allUsers.filter(_ != adminUser)
     EitherT {
       if (userIds.isEmpty) {
-        Future.successful(true).map { _ =>
-          Right(SuccessBase(
-            outcomes = outcomes :+ Outcome.success(apiName)
-          ))
-        }
+        Future.successful(Right(SuccessBase(
+          outcomes = outcomes :+ Outcome.success(apiName)
+        )))
       } else {
         val location = "assignEnrolment"
         Future.sequence {
