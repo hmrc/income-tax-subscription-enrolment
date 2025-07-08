@@ -45,7 +45,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     mockGroupConnector
   )(executionContext)
 
-  private def setup() = {
+  private def setup(users: Seq[String] = userIds) = {
     reset(mockEnrolConnector)
     reset(mockGroupConnector)
     when(mockEnrolConnector.upsertEnrolment(any(), any())(any())).thenReturn(
@@ -55,7 +55,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       Future.successful(Right(EnrolmentAllocated(groupId)))
     )
     when(mockEnrolConnector.getUserIds(any())(any())).thenReturn(
-      Future.successful(Right(UsersFound(userIds)))
+      Future.successful(Right(UsersFound(users)))
     )
     when(mockGroupConnector.getUsersForGroup(any())(any)).thenReturn(
       Future.successful(Right(GroupUsersFound(userIds)))
@@ -70,22 +70,24 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   "enrol" should {
     "return success when all APIs succeed" in {
-      setup()
-      val result = await(service.enrol(utr, nino, mtdbsa))
-      val allAPIs = Seq("ES6") ++ otherAPIs
-      info(s"Succeeding [${allAPIs.mkString(", ")}]")
-      val expected = allAPIs.map(Outcome.success)
-      result match {
-        case Right(outcomes) =>
-          outcomes mustBe expected
-          verify(mockEnrolConnector, times(1)).upsertEnrolment(any(), any())(any())
-          verify(mockEnrolConnector, times(1)).getAllocatedEnrolments(any())(any())
-          verify(mockEnrolConnector, times(1)).getUserIds(any())(any())
-          verify(mockGroupConnector, times(1)).getUsersForGroup(any())(any())
-          verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
-          verify(mockEnrolConnector, times(1)).assignEnrolment(any(), any())(any())
-        case Left(_) =>
-          fail()
+      Seq(userIds, Seq(userIds.head)).foreach { users =>
+        setup(users)
+        val result = await(service.enrol(utr, nino, mtdbsa))
+        val allAPIs = Seq("ES6") ++ otherAPIs
+        info(s"Succeeding [${allAPIs.mkString(", ")}]")
+        val expected = allAPIs.map(Outcome.success)
+        result match {
+          case Right(outcomes) =>
+            outcomes mustBe expected
+            verify(mockEnrolConnector, times(1)).upsertEnrolment(any(), any())(any())
+            verify(mockEnrolConnector, times(1)).getAllocatedEnrolments(any())(any())
+            verify(mockEnrolConnector, times(1)).getUserIds(any())(any())
+            verify(mockGroupConnector, times(1)).getUsersForGroup(any())(any())
+            verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
+            verify(mockEnrolConnector, times(users.size - 1)).assignEnrolment(any(), any())(any())
+          case Left(_) =>
+            fail()
+        }
       }
     }
 
