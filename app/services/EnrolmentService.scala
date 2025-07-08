@@ -220,7 +220,7 @@ class EnrolmentService @Inject()(
     nino: String,
     allUsers: Seq[String],
     adminUser: String,
-    mtdbsa: String,
+    mtdbsa: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessBase] = {
     val apiName = "ES11"
     val outcomes = result.outcomes
