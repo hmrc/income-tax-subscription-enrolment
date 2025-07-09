@@ -17,8 +17,8 @@
 package connectors
 
 import base.{TestData, TestGen}
-import connectors.EnrolmentStoreParsers.{AllocateEnrolmentResponseHttpReads, EnrolFailure, EnrolSuccess, GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreParsers.{AllocateEnrolmentResponseHttpReads, AssignEnrolmentToUserHttpReads, GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
+import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentAssigned, EnrolmentAssignmentFailure, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -86,7 +86,7 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
     "return success with 'userIds' when response is OK and contains valid JSON" in {
       val userId1 = randomString
       val userId2 = randomString
-      val response = UsersFound(Set(userId1, userId2))
+      val response = UsersFound(Seq(userId1, userId2))
       val httpResponse = HttpResponse(
         status = OK,
         headers = Map("content-type" -> Seq("application/json")),
@@ -132,6 +132,24 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
       )
       val httpResponse = HttpResponse(status, response.message)
       val result = AllocateEnrolmentResponseHttpReads.read("", "", httpResponse)
+      result mustBe Left(response)
+    }
+  }
+
+  "AssignEnrolmentToUserHttpReads is invoked" should {
+    "return success when response is CREATED or NO_CONTENT" in {
+      val httpResponse = HttpResponse(Seq(CREATED, NO_CONTENT).random)
+      val result = AssignEnrolmentToUserHttpReads.read("", "", httpResponse)
+      result mustBe Right(EnrolmentAssigned)
+    }
+
+    "return failure when response is other than CREATED or NO_CONTENT" in {
+      val response = EnrolmentAssignmentFailure(
+        status = statuses.filter(_ != CREATED).filter(_ != NO_CONTENT).random,
+        body = randomString
+      )
+      val httpResponse = HttpResponse(response.status, response.body)
+      val result = AssignEnrolmentToUserHttpReads.read("", "", httpResponse)
       result mustBe Left(response)
     }
   }

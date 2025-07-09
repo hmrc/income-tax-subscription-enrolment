@@ -17,8 +17,7 @@
 package services
 
 import base.TestData
-import connectors.EnrolmentStoreParsers.{EnrolFailure, EnrolSuccess}
-import connectors.EnrolmentStoreProxyConnector.{EnrolmentAllocated, EnrolmentFailure, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentAssigned, EnrolmentAssignmentFailure, EnrolmentFailure, EnrolmentSuccess, UsersFound}
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}
@@ -46,7 +45,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     mockGroupConnector
   )(executionContext)
 
-  private def setup() = {
+  private def setup(users: Seq[String] = userIds) = {
     reset(mockEnrolConnector)
     reset(mockGroupConnector)
     when(mockEnrolConnector.upsertEnrolment(any(), any())(any())).thenReturn(
@@ -56,38 +55,47 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       Future.successful(Right(EnrolmentAllocated(groupId)))
     )
     when(mockEnrolConnector.getUserIds(any())(any())).thenReturn(
-      Future.successful(Right(UsersFound(userIds)))
+      Future.successful(Right(UsersFound(users)))
     )
     when(mockGroupConnector.getUsersForGroup(any())(any)).thenReturn(
-      Future.successful(Right(GroupUsersFound(userIds.toSeq)))
+      Future.successful(Right(GroupUsersFound(userIds)))
     )
     when(mockEnrolConnector.allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())).thenReturn(
       Future.successful(Right(EnrolSuccess))
+    )
+    when(mockEnrolConnector.assignEnrolment(any(), any())(any())).thenReturn(
+      Future.successful(Right(EnrolmentAssigned))
     )
   }
 
   "enrol" should {
     "return success when all APIs succeed" in {
-      setup();
-      val result = await(service.enrol(utr, nino, mtdbsa))
-      val allAPIs = Seq("ES6") ++ otherAPIs
-      info(s"Succeeding [${allAPIs.mkString(", ")}]")
-      val expected = allAPIs.map(Outcome.success)
-      result match {
-        case Right(outcomes) =>
-          outcomes mustBe expected
-          verify(mockEnrolConnector, times(1)).upsertEnrolment(any(), any())(any())
-          verify(mockEnrolConnector, times(1)).getAllocatedEnrolments(any())(any())
-          verify(mockEnrolConnector, times(1)).getUserIds(any())(any())
-          verify(mockGroupConnector, times(1)).getUsersForGroup(any())(any())
-          verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
-        case Left(_) =>
-          fail()
+      Seq(userIds, Seq(userIds.head)).foreach { users =>
+        setup(users)
+        val result = await(service.enrol(utr, nino, mtdbsa))
+        val allAPIs = Seq("ES6") ++ (users.size match {
+          case 2 => otherAPIs
+          case _ => otherAPIs.filter(_ != "ES11")
+        })
+        info(s"Succeeding [${allAPIs.mkString(", ")}]")
+        val expected = allAPIs.map(Outcome.success)
+        result match {
+          case Right(outcomes) =>
+            outcomes mustBe expected
+            verify(mockEnrolConnector, times(1)).upsertEnrolment(any(), any())(any())
+            verify(mockEnrolConnector, times(1)).getAllocatedEnrolments(any())(any())
+            verify(mockEnrolConnector, times(1)).getUserIds(any())(any())
+            verify(mockGroupConnector, times(1)).getUsersForGroup(any())(any())
+            verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
+            verify(mockEnrolConnector, times(users.size - 1)).assignEnrolment(any(), any())(any())
+          case Left(_) =>
+            fail()
+        }
       }
     }
 
     "return failure with error when ES6 fails" in {
-      setup();
+      setup()
       val error = EnrolmentFailure(SERVICE_UNAVAILABLE, "")
       when(mockEnrolConnector.upsertEnrolment(any(), any())(any())).thenReturn(
         Future.successful(Left(error))
@@ -101,6 +109,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       verify(mockEnrolConnector, times(0)).getUserIds(any())(any())
       verify(mockGroupConnector, times(0)).getUsersForGroup(any())(any())
       verify(mockEnrolConnector, times(0)).allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())
+      verify(mockEnrolConnector, times(0)).assignEnrolment(any(), any())(any())
     }
 
     "return failure without error if other APIs fail" in {
@@ -123,7 +132,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
     "return error if result unexpected" in {
       otherAPIs.foreach { api =>
-        setup();
+        setup()
         val message = unexpected(api)
         if (message != "") {
           val result = await(service.enrol(utr, nino, mtdbsa))
@@ -150,15 +159,17 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     "ES1",
     "ES0",
     "UGS",
-    "ES8"
+    "ES8",
+    "ES11"
   )
 
   private def failAPI(api: String): String = {
     val message = api match {
-      case "ES1" => failES1
-      case "ES0" => failES0
-      case "UGS" => failUGS
-      case "ES8" => failES8
+      case "ES1"  => failES1
+      case "ES0"  => failES0
+      case "UGS"  => failUGS
+      case "ES8"  => failES8
+      case "ES11" => failES11
       case _ =>
         throw new Exception(s"Unknown API: $api")
     }
@@ -197,12 +208,21 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     message
   }
 
+  private def failES11: String = {
+    val message = s"Error allocating enrolment to: [${userIds.last}]"
+    when(mockEnrolConnector.assignEnrolment(any(), any())(any())).thenReturn(
+      Future.successful(Left(EnrolmentAssignmentFailure(SERVICE_UNAVAILABLE, "")))
+    )
+    message
+  }
+
   private def unexpected(api: String): String = {
     val message = api match {
-      case "ES1" => unexpectedES1
-      case "ES0" => unexpectedES0
-      case "UGS" => unexpectedUGS
-      case "ES8" => ""
+      case "ES1"  => unexpectedES1
+      case "ES0"  => unexpectedES0
+      case "UGS"  => unexpectedUGS
+      case "ES8"  => ""
+      case "ES11" => ""
       case _ =>
         throw new Exception(s"Unknown API: $api")
     }

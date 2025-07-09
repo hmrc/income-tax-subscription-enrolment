@@ -43,4 +43,7 @@ class AppConfig @Inject()(
 
   def allocateEnrolmentEnrolmentStoreUrl(groupId: String): String =
     s"$enrolmentStoreProxyUrl/groups/$groupId/enrolments"
+
+  def assignEnrolmentUrl(userId: String): String =
+    s"$enrolmentStoreProxyUrl/users/$userId/enrolments"
 }
