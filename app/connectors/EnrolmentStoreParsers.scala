@@ -73,8 +73,8 @@ object EnrolmentStoreParsers {
   implicit object AssignEnrolmentToUserHttpReads extends HttpReads[AssignEnrolmentToUserResponse] {
     override def read(method: String, url: String, response: HttpResponse): AssignEnrolmentToUserResponse =
       response.status match {
-        case CREATED => Right(EnrolmentAssigned)
-        case status => Left(EnrolmentAssignmentFailure(status, response.body))
+        case CREATED | NO_CONTENT => Right(EnrolmentAssigned)
+        case status               => Left(EnrolmentAssignmentFailure(status, response.body))
       }
   }
 }

@@ -137,15 +137,15 @@ class EnrolmentStoreParsersSpec extends AnyWordSpec with Matchers with TestData 
   }
 
   "AssignEnrolmentToUserHttpReads is invoked" should {
-    "return success when response is CREATED" in {
-      val httpResponse = HttpResponse(CREATED)
+    "return success when response is CREATED or NO_CONTENT" in {
+      val httpResponse = HttpResponse(Seq(CREATED, NO_CONTENT).random)
       val result = AssignEnrolmentToUserHttpReads.read("", "", httpResponse)
       result mustBe Right(EnrolmentAssigned)
     }
 
-    "return failure when response is other than CREATED" in {
+    "return failure when response is other than CREATED or NO_CONTENT" in {
       val response = EnrolmentAssignmentFailure(
-        status = statuses.filter(_ != CREATED).random,
+        status = statuses.filter(_ != CREATED).filter(_ != NO_CONTENT).random,
         body = randomString
       )
       val httpResponse = HttpResponse(response.status, response.body)
