@@ -1,40 +1,43 @@
 openapi: 3.0.3
 info:
-  title: Enrol to ITSA API.
-  version: '0.1.1'
+  title: Enrol to MTD ITSA
+  version: '1.0.0'
+  description: |
+    # Overview
+    To provide a way to enrol a customer to MTD ITSA without them being present, auto enrolment takes place. Creates the new enrolment for MTD ITSA using the SA UTR as a reference to create the new enrolment and the national insurance number as it's known fact.
+    # Changelog
+    1.0 [2025-07-11] initial release.
   x-integration-catalogue:
-    reviewed-date: 2025-05-15T15:00:00Z
+    reviewed-date: 2025-07-11T15:00:00Z
     platform: HIP
     short-description: This is intended to enrol a given entity to ITSA and
-      will be used by HMRC to auto-enroll eligible businesses. The API is not
+      will be used by HMRC to automatically enrol mandated users. The API is not
       responsible for deciding who to enrol.
     status: ALPHA
     backends:
       - MDTP
     domain: 8
     sub-domain: 8.15
+    api-type: SIMPLE
   license:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0
 servers:
-  - url: https://api.ipaas.prod.eis.ns2p.corp.hmrc.gov.uk/income-tax-subscription-enrolment
-    description: Corporate - Production
-  - url: https://api.ipaas.preprod.eis.ns2p.corp.hmrc.gov.uk/income-tax-subscription-enrolment
-    description: Corporate – Pre-Production
-  - url: https://api.ipaas.test.eis.ns2n.corp.hmrc.gov.uk/income-tax-subscription-enrolment
-    description: Corporate - Test
   - url: https://hip.ws.hmrc.gov.uk/income-tax-subscription-enrolment
     description: MDTP - Production
   - url: https://hip.ws.ibt.hmrc.gov.uk/income-tax-subscription-enrolment
     description: MDTP - QA
+security:
+  - oAuth2:
+      - write:income-tax-subscription-enrolment
 paths:
   /enrol:
     post:
-      summary: This is intended to enrol a given entity to ITSA.
+      summary: This is intended to enrol a given entity to MTD ITSA.
       parameters:
         - $ref: '#/components/parameters/correlationId'
       requestBody:
-        description: Data used for enrolment
+        description: Data used for identification and then subsequent enrolment
         required: true
         content:
           application/json:
@@ -116,7 +119,13 @@ components:
               api:
                 type: string
                 description: API code
-                example: "ES6"
+                enum:
+                  - ES6
+                  - ES1
+                  - ES0
+                  - UGS
+                  - ES8
+                  - ES11
               status:
                 type: string
                 description: Status of calling that API
@@ -131,3 +140,22 @@ components:
         message:
           type: string
           description: Error message from ES6
+  headers:
+    CorrelationId:
+      description: A UUID format string for the transaction used for traceability
+        purposes
+      schema:
+        format: uuid
+        type: string
+        pattern: '^[0-9a-fA-F]{8}[-][0-9a-fA-F]{4}[-][0-9a-fA-F]{4}[-][0-9a-fA-F]{4}[-][0-9a-fA-F]{12}$'
+        example: f0bd1f32-de51-45cc-9b18-0520d6e3ab1a
+  securitySchemes:
+    oAuth2:
+      type: oauth2
+      description: OAuth2 Client Credentials Flow
+      flows:
+        clientCredentials:
+          tokenUrl: /tokenUrl/not-required
+          scopes:
+            write:income-tax-subscription-enrolment: Scope for calling Income Tax Subscription Enrolment
+
