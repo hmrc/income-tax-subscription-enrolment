@@ -50,6 +50,9 @@ paths:
       responses:
         '201':
           description: Known Facts have successfully been inserted in the enrolment store
+          headers:
+            correlationId:
+              $ref: '#/components/headers/correlationId'
           content:
             application/json:
               schema:
@@ -63,8 +66,14 @@ paths:
                 ]
         '400':
           description: Request body is not as expected or missing required request header
+          headers:
+            correlationId:
+              $ref: '#/components/headers/correlationId'
         '422':
           description: It was not possible to transfer Known Facts
+          headers:
+            correlationId:
+              $ref: '#/components/headers/correlationId'
           content:
             application/json:
               schema:
@@ -110,11 +119,18 @@ components:
     responsesSuccess:
       title: Successfully called APIs
       type: object
+      required:
+        - results
       properties:
         results:
           type: array
+          minItems: 1
+          uniqueItems: true
           items:
             type: object
+            required:
+              - api
+              - status
             properties:
               api:
                 type: string
@@ -133,6 +149,9 @@ components:
     responsesError:
       title: Known Facts were not inserted (call to ES6 failed)
       type: object
+      required:
+        - code
+        - message
       properties:
         code:
           type: string
@@ -141,7 +160,7 @@ components:
           type: string
           description: Error message from ES6
   headers:
-    CorrelationId:
+    correlationId:
       description: A UUID format string for the transaction used for traceability
         purposes
       schema:
