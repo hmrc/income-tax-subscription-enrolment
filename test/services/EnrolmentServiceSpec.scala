@@ -17,7 +17,7 @@
 package services
 
 import base.TestData
-import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentAssigned, EnrolmentAssignmentFailure, EnrolmentFailure, EnrolmentSuccess, UsersFound}
+import connectors.EnrolmentStoreProxyConnector._
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}
@@ -54,10 +54,10 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     when(mockEnrolConnector.getAllocatedEnrolments(eql(utr))(any())).thenReturn(
       Future.successful(Right(EnrolmentAllocated(groupId)))
     )
-    when(mockEnrolConnector.getUserIds(any())(any())).thenReturn(
+    when(mockEnrolConnector.getUserIds(eql(utr))(any())).thenReturn(
       Future.successful(Right(UsersFound(users)))
     )
-    when(mockGroupConnector.getUsersForGroup(any())(any)).thenReturn(
+    when(mockGroupConnector.getUsersForGroup(eql(groupId))(any)).thenReturn(
       Future.successful(Right(GroupUsersFound(users)))
     )
     when(mockEnrolConnector.allocateEnrolmentWithoutKnownFacts(eql(groupId), eql(users.head), eql(mtdbsa))(any())).thenReturn(
@@ -101,14 +101,14 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     "return failure with error when ES6 fails" in {
       setup()
       val error = EnrolmentFailure(SERVICE_UNAVAILABLE, "")
-      when(mockEnrolConnector.upsertEnrolment(any(), any())(any())).thenReturn(
+      when(mockEnrolConnector.upsertEnrolment(eql(mtdbsa), eql(nino))(any())).thenReturn(
         Future.successful(Left(error))
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result mustBe Left(Failure(
         error = Some(error.asError())
       ))
-      verify(mockEnrolConnector, times(1)).upsertEnrolment(any(), any())(any())
+      verify(mockEnrolConnector, times(1)).upsertEnrolment(eql(mtdbsa), eql(nino))(any())
       verify(mockEnrolConnector, times(0)).getAllocatedEnrolments(any())(any())
       verify(mockEnrolConnector, times(0)).getUserIds(any())(any())
       verify(mockGroupConnector, times(0)).getUsersForGroup(any())(any())
@@ -175,7 +175,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   private def failES1: String = {
     val message = "Service unavailable"
-    when(mockEnrolConnector.getAllocatedEnrolments(any())(any())).thenReturn(
+    when(mockEnrolConnector.getAllocatedEnrolments(eql(utr))(any())).thenReturn(
       Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, message)))
     )
     message
@@ -183,14 +183,14 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   private def failES0: String = {
     val message = "Service unavailable"
-    when(mockEnrolConnector.getUserIds(any())(any())).thenReturn(
+    when(mockEnrolConnector.getUserIds(eql(utr))(any())).thenReturn(
       Future.successful(Left(EnrolmentFailure(SERVICE_UNAVAILABLE, message)))
     )
     message
   }
 
   private def failUGS: String = {
-    when(mockGroupConnector.getUsersForGroup(any())(any())).thenReturn(
+    when(mockGroupConnector.getUsersForGroup(eql(groupId))(any())).thenReturn(
       Future.successful(Right(GroupUsersFound(Seq.empty)))
     )
     s"No ADMIN users for group: $groupId"
@@ -198,17 +198,20 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   private def failES8: String = {
     val message = "Service unavailable"
-    when(mockEnrolConnector.allocateEnrolmentWithoutKnownFacts(any(), any(), any())(any())).thenReturn(
+    when(mockEnrolConnector.allocateEnrolmentWithoutKnownFacts(eql(groupId), eql(userIds.head), eql(mtdbsa))(any())).thenReturn(
       Future.successful(Left(EnrolFailure(message)))
     )
     message
   }
 
   private def failES11: String = {
-    val message = s"Error allocating enrolment to: [${userIds.last}]"
-    when(mockEnrolConnector.assignEnrolment(any(), any())(any())).thenReturn(
-      Future.successful(Left(EnrolmentAssignmentFailure(SERVICE_UNAVAILABLE, "")))
-    )
+    val users = userIds.tail
+    val message = s"Error allocating enrolment to: [${users.mkString(", ")}]"
+    users.foreach { userId =>
+      when(mockEnrolConnector.assignEnrolment(eql(userId), eql(mtdbsa))(any())).thenReturn(
+        Future.successful(Left(EnrolmentAssignmentFailure(SERVICE_UNAVAILABLE, "")))
+      )
+    }
     message
   }
 
@@ -229,14 +232,14 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   }
 
   private def unexpectedES1: String = {
-    when(mockEnrolConnector.getAllocatedEnrolments(any())(any())).thenReturn(
+    when(mockEnrolConnector.getAllocatedEnrolments(eql(utr))(any())).thenReturn(
       Future.successful(Right(EnrolmentSuccess))
     )
     "Unexpected"
   }
 
   private def unexpectedES0: String = {
-    when(mockEnrolConnector.getUserIds(any())(any())).thenReturn(
+    when(mockEnrolConnector.getUserIds(eql(utr))(any())).thenReturn(
       Future.successful(Right(EnrolmentSuccess))
     )
     "Unexpected"
@@ -244,7 +247,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   private def unexpectedUGS: String = {
     val status = NO_CONTENT
-    when(mockGroupConnector.getUsersForGroup(any())(any())).thenReturn(
+    when(mockGroupConnector.getUsersForGroup(eql(groupId))(any())).thenReturn(
       Future.successful(Left(UsersGroupsSearchConnectionFailure(status)))
     )
     s"$status"
