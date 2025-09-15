@@ -37,10 +37,10 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
   )
 
   override def overriddenConfig(): Map[String, String] = Map(
-    "microservice.services.enrolment-store-proxy.host" -> mockHost,
-    "microservice.services.enrolment-store-proxy.port" -> mockPort,
-    "microservice.services.users-groups-search.host" -> mockHost,
-    "microservice.services.users-groups-search.port" -> mockPort
+    "microservice.services.enrolment-store-proxy.host" -> wireMockHost,
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort.toString,
+    "microservice.services.users-groups-search.host" -> wireMockHost,
+    "microservice.services.users-groups-search.port" -> wireMockPort.toString
   )
 
   private val correlationId = UUID.randomUUID().toString
