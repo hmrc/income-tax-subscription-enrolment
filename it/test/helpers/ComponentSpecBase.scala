@@ -22,46 +22,34 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.ws.{WSClient, WSRequest}
 import play.api.{Application, Environment, Mode}
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.test.WireMockSupport
 
 trait ComponentSpecBase extends AnyWordSpecLike
   with OptionValues
   with GivenWhenThen with TestSuite
   with GuiceOneServerPerSuite with ScalaFutures with IntegrationPatience with Matchers with Assertions
-  with WiremockHelper with BeforeAndAfterEach with BeforeAndAfterAll with Eventually {
+  with WireMockSupport with BeforeAndAfterEach with BeforeAndAfterAll with Eventually {
+
+  private lazy val ws = app.injector.instanceOf[WSClient]
 
   override implicit lazy val app: Application = new GuiceApplicationBuilder()
     .in(Environment.simple(mode = Mode.Dev))
     .configure(config)
     .build()
 
-  val mockHost: String = WiremockHelper.wiremockHost
-  val mockPort: String = WiremockHelper.wiremockPort.toString
-  val mockUrl = s"http://$mockHost:$mockPort"
-
   def config: Map[String, String] = Map(
-    "microservice.services.auth.host" -> mockHost,
-    "microservice.services.auth.port" -> mockPort
+    "microservice.services.auth.host" -> wireMockHost,
+    "microservice.services.auth.port" -> wireMockPort.toString
   ) ++ overriddenConfig()
 
   def overriddenConfig(): Map[String, String] = Map.empty
 
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-    startWiremock()
-  }
-
-  override protected def beforeEach(): Unit = {
-    super.beforeEach()
-    resetWiremock()
-  }
-
-  override protected def afterAll(): Unit = {
-    stopWiremock()
-    super.afterAll()
-  }
-
   implicit val hc: HeaderCarrier = HeaderCarrier()
 
+  def buildClient(path: String): WSRequest =
+    ws.url(s"http://localhost:$port/income-tax-subscription-enrolment$path")
+      .withFollowRedirects(false)
 }

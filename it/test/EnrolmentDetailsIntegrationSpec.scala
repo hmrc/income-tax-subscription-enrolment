@@ -37,10 +37,10 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
   )
 
   override def overriddenConfig(): Map[String, String] = Map(
-    "microservice.services.enrolment-store-proxy.host" -> mockHost,
-    "microservice.services.enrolment-store-proxy.port" -> mockPort,
-    "microservice.services.users-groups-search.host" -> mockHost,
-    "microservice.services.users-groups-search.port" -> mockPort
+    "microservice.services.enrolment-store-proxy.host" -> wireMockHost,
+    "microservice.services.enrolment-store-proxy.port" -> wireMockPort.toString,
+    "microservice.services.users-groups-search.host" -> wireMockHost,
+    "microservice.services.users-groups-search.port" -> wireMockPort.toString
   )
 
   private val correlationId = UUID.randomUUID().toString
@@ -49,7 +49,7 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
     stubES6(apiToFail == "ES6", appConfig, mtdbsa)
     stubES1(apiToFail == "ES1", appConfig, utr, groupId)
     stubES0(apiToFail == "ES0", appConfig, utr, userIds)
-    stubUGS(apiToFail == "UGS", appConfig, groupId, userIds.toSeq)
+    stubUGS(apiToFail == "UGS", appConfig, groupId, userIds)
     stubES8(apiToFail == "ES8", appConfig, groupId, mtdbsa)
     stubES11(apiToFail == "ES11", appConfig, userIds, mtdbsa)
   }
@@ -89,12 +89,4 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
       }
     }
   }
-
-  private val apis = Seq(
-    "ES6",
-    "ES1",
-    "ES0",
-    "UGS",
-    "ES8"
-  )
 }

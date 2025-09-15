@@ -18,6 +18,7 @@ package controllers
 
 import base.TestData
 import models.{EnrolmentDetails, EnrolmentError, EnrolmentResponse, Outcome}
+import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.matchers.should.Matchers
@@ -28,6 +29,7 @@ import play.api.libs.json.{JsSuccess, Json}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import services.{EnrolmentService, Failure}
+import ArgumentMatchers.{eq => eql}
 
 import scala.concurrent.Future
 
@@ -47,8 +49,8 @@ class EnrolmentControllerSpec extends AnyWordSpec with Matchers with TestData {
 
   "enrol" should {
     "return 201 when all downstream APIs succeed" in {
-      val response = Seq(Outcome.success("ES6"))
-      when(mockService.enrol(any(), any(), any())(any())).thenReturn(
+      val response = apis.map(Outcome.success)
+      when(mockService.enrol(eql(utr), eql(nino), eql(mtdbsa))(any())).thenReturn(
         Future.successful(Right(response))
       )
       val fakeRequest = FakeRequest().withBody(Json.toJson(validEnrolmentDetails))
@@ -59,7 +61,7 @@ class EnrolmentControllerSpec extends AnyWordSpec with Matchers with TestData {
 
     "return 422 when ES6 fails" in {
       val error = EnrolmentError("404", "")
-      when(mockService.enrol(any(), any(), any())(any())).thenReturn(
+      when(mockService.enrol(eql(utr), eql(nino), eql(mtdbsa))(any())).thenReturn(
         Future.successful(Left(Failure(
           error = Some(error)
         )))
@@ -72,7 +74,7 @@ class EnrolmentControllerSpec extends AnyWordSpec with Matchers with TestData {
 
     "return 201 when ES6 succeeds and other APIs fail" in {
       val response = Seq(Outcome.success("ES6"), Outcome("others", "fail"))
-      when(mockService.enrol(any(), any(), any())(any())).thenReturn(
+      when(mockService.enrol(eql(utr), eql(nino), eql(mtdbsa))(any())).thenReturn(
         Future.successful(Left(Failure(
           outcomes = response
         )))
