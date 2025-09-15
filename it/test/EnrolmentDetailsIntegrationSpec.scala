@@ -49,7 +49,7 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
     stubES6(apiToFail == "ES6", appConfig, mtdbsa)
     stubES1(apiToFail == "ES1", appConfig, utr, groupId)
     stubES0(apiToFail == "ES0", appConfig, utr, userIds)
-    stubUGS(apiToFail == "UGS", appConfig, groupId, userIds.toSeq)
+    stubUGS(apiToFail == "UGS", appConfig, groupId, userIds)
     stubES8(apiToFail == "ES8", appConfig, groupId, mtdbsa)
     stubES11(apiToFail == "ES11", appConfig, userIds, mtdbsa)
   }
