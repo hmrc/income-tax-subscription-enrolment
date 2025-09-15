@@ -108,4 +108,15 @@ trait TestData {
   )
 
   implicit val format: OFormat[Cred] = Json.format[Cred]
+
+  val otherAPIs: Seq[String] = Seq(
+    "ES1",
+    "ES0",
+    "UGS",
+    "ES8",
+    "ES11"
+  )
+
+  val apis: Seq[String] =
+    Seq("ES6") ++ otherAPIs
 }

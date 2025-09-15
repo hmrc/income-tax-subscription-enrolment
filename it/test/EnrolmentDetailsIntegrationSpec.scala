@@ -89,12 +89,4 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
       }
     }
   }
-
-  private val apis = Seq(
-    "ES6",
-    "ES1",
-    "ES0",
-    "UGS",
-    "ES8"
-  )
 }
