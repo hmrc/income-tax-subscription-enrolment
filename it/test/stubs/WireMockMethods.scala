@@ -20,7 +20,6 @@ import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.matching.UrlPattern
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import helpers.WiremockHelper
 import play.api.libs.json.Writes
 
 trait WireMockMethods {
@@ -79,19 +78,6 @@ trait WireMockMethods {
 
       stubFor(mapping.willReturn(response))
     }
-  }
-
-  def verify(method: HTTPMethod, uri: String): Unit = verifyInternal(method, uri, None)
-  def verify[T](method: HTTPMethod, uri: String, body: T)(implicit writes: Writes[T]): Unit = {
-    val stringBody = writes.writes(body).toString()
-    verifyInternal(method, uri, Some(stringBody))
-  }
-
-  private def verifyInternal(method: HTTPMethod, uri: String, bodyString: Option[String]): Unit = method match {
-    case GET => WiremockHelper.verifyGet(uri)
-    case POST => WiremockHelper.verifyPost(uri, bodyString)
-    case DELETE => WiremockHelper.verifyDelete(uri)
-    case _ => ()
   }
 
   sealed trait HTTPMethod {
