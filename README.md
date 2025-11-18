@@ -1,5 +1,5 @@
 
-# Incoome Tax Subscription Enrolment
+# Income Tax Subscription Enrolment
 
 This service is used to migrate users from existing Self Assessment (IR-SA) enrolments to the Making Tax Digital (HMRC-MTD-IT)
 enrolment.
@@ -39,7 +39,7 @@ curl -XPOST http://localhost:9595/enrolment-store-stub/data -H "content-type: ap
 			"identifiers": [
 				{
 					"key": "UTR",
-					"value": "123456"
+					"value": "1234567890"
 				}
 			],
 			"enrolmentFriendlyName": "IR SA Enrolment",
@@ -55,7 +55,7 @@ curl -XPOST http://localhost:9595/enrolment-store-stub/data -H "content-type: ap
 ```
 
 ```
-curl http://localhost:9564/income-tax-subspription-enrolment/enrol --header "Content-Type: application/json" --request POST --data '{"nino":"AB123456C","utr":"1234567890","mtdnsa":"qwer00000000000"}'
+curl http://localhost:9564/income-tax-subscription-enrolment/enrol --header "Content-Type: application/json" --request POST --data '{"nino":"AB123456C","utr":"1234567890","mtdbsa":"qwer00000000000"}'
 ```
 
 ### License
