@@ -23,6 +23,7 @@ import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import stubs.EnrolmentStoreProxyStubs.{stubES0, stubES1, stubES11, stubES6, stubES8}
 import stubs.UsersGroupSearchStubs.stubUGS
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 
 import java.util.UUID
 
