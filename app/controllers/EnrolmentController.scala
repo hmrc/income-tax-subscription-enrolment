@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext
 @Singleton()
 class EnrolmentController @Inject()(
   enrolmentService: EnrolmentService
-)(implicit cc: ControllerComponents, implicit val ec: ExecutionContext) extends BackendController(cc) {
+)(implicit cc: ControllerComponents, ec: ExecutionContext) extends BackendController(cc) {
 
   def enrol(): Action[JsValue] = Action.async(parse.json) { implicit request =>
     withJsonBody[EnrolmentDetails] { enrolmentDetails =>

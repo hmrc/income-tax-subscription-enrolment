@@ -21,6 +21,7 @@ import connectors.EnrolmentStoreProxyConnector.{AllocateEnrolmentResponse, Assig
 import play.api.libs.json.{Json, OFormat}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
