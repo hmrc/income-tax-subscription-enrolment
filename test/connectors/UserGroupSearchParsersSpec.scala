@@ -19,7 +19,7 @@ package connectors
 import base.{TestData, TestGen}
 import connectors.UserGroupSearchParsers.GetUsersForGroupsHttpReads
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, InvalidJson, UsersGroupsSearchConnectionFailure}
-import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
+import org.scalatest.matchers.must.Matchers.mustBe
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.Status.NON_AUTHORITATIVE_INFORMATION
