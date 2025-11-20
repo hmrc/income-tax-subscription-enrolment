@@ -19,7 +19,7 @@ package connectors
 import base.{TestData, TestGen}
 import connectors.EnrolmentStoreParsers.{AllocateEnrolmentResponseHttpReads, AssignEnrolmentToUserHttpReads, GroupIdResponseParser, UpsertResponseParser, UserIdsResponseParser}
 import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentAssigned, EnrolmentAssignmentFailure, EnrolmentFailure, EnrolmentSuccess, UsersFound}
-import org.scalatest.matchers.must.Matchers.convertToAnyMustWrapper
+import org.scalatest.matchers.must.Matchers.mustBe
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.Status._

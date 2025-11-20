@@ -18,9 +18,10 @@ package connectors
 
 import config.AppConfig
 import connectors.EnrolmentStoreProxyConnector.{AllocateEnrolmentResponse, AssignEnrolmentToUserResponse, EnrolmentResponse}
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Json, OWrites}
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.{HeaderCarrier, StringContextOps}
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
@@ -142,7 +143,7 @@ case class EnrolmentStoreProxyVerifier(
 )
 
 object EnrolmentStoreProxyVerifier {
-  implicit val format: OFormat[EnrolmentStoreProxyVerifier] = Json.format[EnrolmentStoreProxyVerifier]
+  implicit val writes: OWrites[EnrolmentStoreProxyVerifier] = Json.writes[EnrolmentStoreProxyVerifier]
 }
 
 case class EnrolmentStoreProxyRequest(
@@ -150,7 +151,7 @@ case class EnrolmentStoreProxyRequest(
 )
 
 object EnrolmentStoreProxyRequest {
-  implicit val format: OFormat[EnrolmentStoreProxyRequest] = Json.format[EnrolmentStoreProxyRequest]
+  implicit val writes: OWrites[EnrolmentStoreProxyRequest] = Json.writes[EnrolmentStoreProxyRequest]
 }
 
 case class EnrolmentKey(serviceName: String, identifiers: (String, String)*) {

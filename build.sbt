@@ -17,7 +17,7 @@
 import uk.gov.hmrc.DefaultBuildSettings
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / scalaVersion := "3.3.6"
 
 lazy val microservice = Project("income-tax-subscription-enrolment", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
