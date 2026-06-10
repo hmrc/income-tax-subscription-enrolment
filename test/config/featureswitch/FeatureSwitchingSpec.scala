@@ -20,29 +20,27 @@ import config.AppConfig
 import config.featureswitch.FeatureSwitch.{CompositeEnrolmentKey, DistributedKnownFactsPattern}
 import org.mockito.Mockito.{reset, when}
 import org.scalatest.BeforeAndAfterEach
+import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.mockito.MockitoSugar.mock
+import org.scalatestplus.play.PlaySpec
 import play.api.Configuration
-import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
-import utilities.UnitTestTrait
 
-class FeatureSwitchingSpec extends UnitTestTrait with BeforeAndAfterEach {
+class FeatureSwitchingSpec extends PlaySpec with MockitoSugar with BeforeAndAfterEach {
 
   private val switchesUnderTest: Set[FeatureSwitch] = Set(
     CompositeEnrolmentKey,
     DistributedKnownFactsPattern
   )
 
-  val servicesConfig: ServicesConfig = app.injector.instanceOf[ServicesConfig]
-
   val mockConfig: Configuration = mock[Configuration]
+
+  val mockAppConfig: AppConfig = mock[AppConfig]
+
+  when(mockAppConfig.configuration).thenReturn(mockConfig)
 
   val featureSwitching: FeatureSwitching =
     new FeatureSwitching {
-      override val appConfig: AppConfig =
-        new AppConfig(
-          config = servicesConfig,
-          configuration = mockConfig
-        )
+      override val appConfig: AppConfig = mockAppConfig
     }
 
   override def beforeEach(): Unit = {
@@ -65,19 +63,19 @@ class FeatureSwitchingSpec extends UnitTestTrait with BeforeAndAfterEach {
 
   "FeatureSwitching constants" should {
     "be true and false" in {
-      FEATURE_SWITCH_ON mustBe "true"
-      FEATURE_SWITCH_OFF mustBe "false"
+      featureSwitching.FEATURE_SWITCH_ON mustBe "true"
+      featureSwitching.FEATURE_SWITCH_OFF mustBe "false"
     }
   }
 
   "CompositeEnrolmentKey" should {
     "return true if CompositeEnrolmentKey feature switch is enabled in sys.props" in {
-      enable(CompositeEnrolmentKey)
+      featureSwitching.enable(CompositeEnrolmentKey)
       featureSwitching.isEnabled(CompositeEnrolmentKey) mustBe true
     }
 
     "return false if CompositeEnrolmentKey feature switch is disabled in sys.props" in {
-      disable(CompositeEnrolmentKey)
+      featureSwitching.disable(CompositeEnrolmentKey)
       featureSwitching.isEnabled(CompositeEnrolmentKey) mustBe false
     }
 
@@ -87,24 +85,24 @@ class FeatureSwitchingSpec extends UnitTestTrait with BeforeAndAfterEach {
     }
 
     "return false if CompositeEnrolmentKey feature switch is not in sys.props but is set to off in config" in {
-      when(mockConfig.getOptional[String]("feature-switch.composite-enrolment-key")).thenReturn(Some(FEATURE_SWITCH_OFF))
+      when(mockConfig.getOptional[String]("feature-switch.composite-enrolment-key")).thenReturn(Some(featureSwitching.FEATURE_SWITCH_OFF))
       featureSwitching.isEnabled(CompositeEnrolmentKey) mustBe false
     }
 
     "return true if CompositeEnrolmentKey feature switch is not in sys.props but is set to on in config" in {
-      when(mockConfig.getOptional[String]("feature-switch.composite-enrolment-key")).thenReturn(Some(FEATURE_SWITCH_ON))
+      when(mockConfig.getOptional[String]("feature-switch.composite-enrolment-key")).thenReturn(Some(featureSwitching.FEATURE_SWITCH_ON))
       featureSwitching.isEnabled(CompositeEnrolmentKey) mustBe true
     }
   }
 
   "DistributedKnownFactsPattern" should {
     "return true if DistributedKnownFactsPattern feature switch is enabled in sys.props" in {
-      enable(DistributedKnownFactsPattern)
+      featureSwitching.enable(DistributedKnownFactsPattern)
       featureSwitching.isEnabled(DistributedKnownFactsPattern) mustBe true
     }
 
     "return false if DistributedKnownFactsPattern feature switch is disabled in sys.props" in {
-      disable(DistributedKnownFactsPattern)
+      featureSwitching.disable(DistributedKnownFactsPattern)
       featureSwitching.isEnabled(DistributedKnownFactsPattern) mustBe false
     }
 
@@ -114,12 +112,12 @@ class FeatureSwitchingSpec extends UnitTestTrait with BeforeAndAfterEach {
     }
 
     "return false if DistributedKnownFactsPattern feature switch is not in sys.props but is set to off in config" in {
-      when(mockConfig.getOptional[String]("feature-switch.distributed-known-facts-pattern")).thenReturn(Some(FEATURE_SWITCH_OFF))
+      when(mockConfig.getOptional[String]("feature-switch.distributed-known-facts-pattern")).thenReturn(Some(featureSwitching.FEATURE_SWITCH_OFF))
       featureSwitching.isEnabled(DistributedKnownFactsPattern) mustBe false
     }
 
     "return true if DistributedKnownFactsPattern feature switch is not in sys.props but is set to on in config" in {
-      when(mockConfig.getOptional[String]("feature-switch.distributed-known-facts-pattern")).thenReturn(Some(FEATURE_SWITCH_ON))
+      when(mockConfig.getOptional[String]("feature-switch.distributed-known-facts-pattern")).thenReturn(Some(featureSwitching.FEATURE_SWITCH_ON))
       featureSwitching.isEnabled(DistributedKnownFactsPattern) mustBe true
     }
   }
