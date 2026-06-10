@@ -21,8 +21,6 @@ sealed trait FeatureSwitch {
   val displayText: String
 }
 
-sealed trait DatedFeatureSwitch extends FeatureSwitch
-
 object FeatureSwitch {
   val prefix = "feature-switch"
 

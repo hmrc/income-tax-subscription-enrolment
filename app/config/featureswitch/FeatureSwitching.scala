@@ -19,9 +19,7 @@ package config.featureswitch
 import config.AppConfig
 import play.api.Logging
 
-import java.time.LocalDate
 import javax.inject.{Inject, Singleton}
-import scala.util.Try
 
 trait FeatureSwitching extends Logging {
 
@@ -33,26 +31,11 @@ trait FeatureSwitching extends Logging {
   def isEnabled(featureSwitch: FeatureSwitch): Boolean = {
     lazy val systemProperty = sys.props.get(featureSwitch.name)
     lazy val configProperty = appConfig.configuration.getOptional[String](featureSwitch.name)
-    lazy val configEnabled = featureSwitch match {
-      case switch: DatedFeatureSwitch =>
-        Try {
-          (systemProperty orElse configProperty).map(LocalDate.parse) match {
-            case Some(date) => !LocalDate.now().isBefore(date)
-            case None =>
-              logger.error(s"[FeatureSwitching][isEnabled] - No date specified for ${featureSwitch.name}")
-              false
-          }
-        } getOrElse {
-          logger.error(s"[FeatureSwitching][isEnabled] - Failed to parse date for ${featureSwitch.name}")
-          false
-        }
-      case _ => configProperty contains FEATURE_SWITCH_ON
-    }
 
     systemProperty match {
       case Some(FEATURE_SWITCH_ON) => true
       case Some(FEATURE_SWITCH_OFF) => false
-      case _ => configEnabled
+      case _ => configProperty.contains(FEATURE_SWITCH_ON)
     }
   }
 
