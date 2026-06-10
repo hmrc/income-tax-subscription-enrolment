@@ -24,16 +24,6 @@ sealed trait FeatureSwitch {
 object FeatureSwitch {
   val prefix = "feature-switch"
 
-  val switches: Set[FeatureSwitch] = Set()
-
-  def apply(str: String): FeatureSwitch =
-    switches find (_.name == str) match {
-      case Some(switch) => switch
-      case None => throw new IllegalArgumentException("Invalid feature switch: " + str)
-    }
-
-  def get(str: String): Option[FeatureSwitch] = switches find (_.name == str)
-
   case object CompositeEnrolmentKey extends FeatureSwitch {
     override val name: String = s"$prefix.composite-enrolment-key"
     override val displayText: String = "CompositeEnrolmentKey"
