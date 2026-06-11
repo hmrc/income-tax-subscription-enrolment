@@ -20,7 +20,6 @@ import base.TestData
 import config.AppConfig
 import config.featureswitch.FeatureSwitch.CompositeEnrolmentKey
 import config.featureswitch.FeatureSwitching
-import org.apache.pekko.actor.TypedActor.dispatcher
 import org.scalatest.matchers.must.Matchers.mustBe
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.mockito.MockitoSugar.mock
