@@ -40,11 +40,11 @@ class EnrolmentService @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[Failure, Seq[Outcome]]] = {
     val result = SuccessBase()
     for {
-      resultES6  <- upsertEnrolmentAllocation(result, nino, mtdbsa)
+      resultES6  <- upsertEnrolmentAllocation(result, nino, mtdbsa, utr)
       resultES1  <- getGroupIdForEnrolment(resultES6, nino, utr)
       resultES0  <- getUserIdsForEnrolment(resultES1, nino, utr)
       resultUGS  <- getAdminUserForGroup(resultES0, nino, resultES1.groupId, resultES0.userIds)
-      resultES8  <- allocateEnrolmentWithoutKnownFacts(resultUGS, nino, mtdbsa, resultES1.groupId, resultUGS.userId)
+      resultES8  <- allocateEnrolmentWithoutKnownFacts(resultUGS, nino, utr, mtdbsa, resultES1.groupId, resultUGS.userId)
       resultES11 <- assignEnrolment(resultES8, nino, resultES0.userIds, resultUGS.userId, mtdbsa)
     } yield {
       resultES11.outcomes
@@ -71,11 +71,12 @@ class EnrolmentService @Inject()(
   private def upsertEnrolmentAllocation(
     result: Success,
     nino: String,
-    mtdbsa: String
+    mtdbsa: String,
+    utr: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES6] = {
     EitherT {
       val location = "upsertEnrolmentAllocation"
-      enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
+      enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino, utr).map {
         case Right(_) =>
           Right(SuccessES6(
             outcomes = result.outcomes :+ Outcome.success("ES6")
@@ -193,6 +194,7 @@ class EnrolmentService @Inject()(
   private def allocateEnrolmentWithoutKnownFacts(
     result: SuccessUGS,
     nino: String,
+    utr: String,
     mtdbsa: String,
     groupId: String,
     userId: String
@@ -201,7 +203,7 @@ class EnrolmentService @Inject()(
     val outcomes = result.outcomes
     EitherT {
       val location = "allocateEnrolmentWithoutKnownFacts"
-      enrolmentStoreProxyConnector.allocateEnrolmentWithoutKnownFacts(groupId = groupId, userId, mtdbsa).map {
+      enrolmentStoreProxyConnector.allocateEnrolmentWithoutKnownFacts(groupId = groupId, userId, mtdbsa, utr).map {
         case Right(EnrolSuccess) =>
           Right(SuccessBase(
             outcomes = outcomes :+ Outcome.success(apiName)

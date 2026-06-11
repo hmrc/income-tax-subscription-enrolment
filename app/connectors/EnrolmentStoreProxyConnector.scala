@@ -17,6 +17,8 @@
 package connectors
 
 import config.AppConfig
+import config.featureswitch.FeatureSwitch.CompositeEnrolmentKey
+import config.featureswitch.FeatureSwitching
 import connectors.EnrolmentStoreProxyConnector.{AllocateEnrolmentResponse, AssignEnrolmentToUserResponse, EnrolmentResponse}
 import play.api.libs.json.{Json, OWrites}
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -29,23 +31,20 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class EnrolmentStoreProxyConnector @Inject()(
   http: HttpClientV2,
-  appConfig: AppConfig
-)(implicit ec: ExecutionContext) {
+  val appConfig: AppConfig
+)(implicit ec: ExecutionContext) extends FeatureSwitching {
 
   def upsertEnrolment(
     mtdbsa: String,
-    nino: String
+    nino: String,
+    utr: String
   )(implicit hc: HeaderCarrier): Future[EnrolmentResponse] = {
-    val enrolmentKey = EnrolmentKey(
-      serviceName = "HMRC-MTD-IT",
-      identifiers = "MTDITID" -> mtdbsa
-    )
     val requestBody = EnrolmentStoreProxyRequest(Seq(EnrolmentStoreProxyVerifier(
       key = "NINO",
       value = nino
     )))
     import connectors.EnrolmentStoreParsers.UpsertResponseParser
-    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}"
+    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey(mtdbsa, utr).asString}"
     http.put(url).withBody(
       body = Json.toJson(requestBody)
     ).execute
@@ -78,18 +77,15 @@ class EnrolmentStoreProxyConnector @Inject()(
   def allocateEnrolmentWithoutKnownFacts(
     groupId: String,
     userId: String,
-    mtdbsa: String
+    mtdbsa: String,
+    utr: String
   )(implicit hc: HeaderCarrier): Future[AllocateEnrolmentResponse] = {
-    val enrolmentKey = EnrolmentKey(
-      serviceName = "HMRC-MTD-IT",
-      identifiers = "MTDITID" -> mtdbsa
-    )
     val requestBody = Json.obj(
       "userId" -> userId,
       "type" -> "principal",
       "action" -> "enrolAndActivate"
     )
-    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey.asString}"
+    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey(mtdbsa, utr).asString}"
     import connectors.EnrolmentStoreParsers.AllocateEnrolmentResponseHttpReads
     http.post(url).withBody(
       body = requestBody
@@ -107,6 +103,14 @@ class EnrolmentStoreProxyConnector @Inject()(
     val url = url"${appConfig.assignEnrolmentUrl(userId)}/${enrolmentKey.asString}"
     import connectors.EnrolmentStoreParsers.AssignEnrolmentToUserHttpReads
     http.post(url).execute
+  }
+
+  def enrolmentKey(mtdbsa: String, utr: String): EnrolmentKey = {
+    val utrId = if (isEnabled(CompositeEnrolmentKey)) Seq("UTR" -> utr) else Seq.empty
+    EnrolmentKey(
+      serviceName = "HMRC-MTD-IT",
+      identifiers = Seq("MTDITID" -> mtdbsa) ++ utrId:_*
+    )
   }
 }
 
