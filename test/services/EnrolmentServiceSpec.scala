@@ -48,7 +48,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
   private def setup(users: Seq[String] = userIds) = {
     reset(mockEnrolConnector)
     reset(mockGroupConnector)
-    when(mockEnrolConnector.upsertEnrolment(eql(mtdbsa), eql(nino), eql(utr))(any())).thenReturn(
+    when(mockEnrolConnector.upsertEnrolment(eql(mtdbsa), eql(nino))(any())).thenReturn(
       Future.successful(Right(EnrolmentSuccess))
     )
     when(mockEnrolConnector.getAllocatedEnrolments(eql(utr))(any())).thenReturn(
@@ -84,7 +84,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
         result match {
           case Right(outcomes) =>
             outcomes mustBe expected
-            verify(mockEnrolConnector, times(1)).upsertEnrolment(eql(mtdbsa), eql(nino), eql(utr))(any())
+            verify(mockEnrolConnector, times(1)).upsertEnrolment(eql(mtdbsa), eql(nino))(any())
             verify(mockEnrolConnector, times(1)).getAllocatedEnrolments(eql(utr))(any())
             verify(mockEnrolConnector, times(1)).getUserIds(eql(utr))(any())
             verify(mockGroupConnector, times(1)).getUsersForGroup(eql(groupId))(any())
@@ -101,14 +101,14 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     "return failure with error when ES6 fails" in {
       setup()
       val error = EnrolmentFailure(SERVICE_UNAVAILABLE, "")
-      when(mockEnrolConnector.upsertEnrolment(eql(mtdbsa), eql(nino), eql(utr))(any())).thenReturn(
+      when(mockEnrolConnector.upsertEnrolment(eql(mtdbsa), eql(nino))(any())).thenReturn(
         Future.successful(Left(error))
       )
       val result = await(service.enrol(utr, nino, mtdbsa))
       result mustBe Left(Failure(
         error = Some(error.asError())
       ))
-      verify(mockEnrolConnector, times(1)).upsertEnrolment(eql(mtdbsa), eql(nino), eql(utr))(any())
+      verify(mockEnrolConnector, times(1)).upsertEnrolment(eql(mtdbsa), eql(nino))(any())
       verify(mockEnrolConnector, times(0)).getAllocatedEnrolments(any())(any())
       verify(mockEnrolConnector, times(0)).getUserIds(any())(any())
       verify(mockGroupConnector, times(0)).getUsersForGroup(any())(any())

@@ -36,15 +36,20 @@ class EnrolmentStoreProxyConnectorSpec extends AnyWordSpec with FeatureSwitching
   )
 
   "enrolmentKey" should {
+    "not contain a utr if no utr specified" in {
+      val key = connector.enrolmentKey(mtdbsa).asString
+      key.contains(utr) mustBe false
+    }
+
     "contain the utr if FS is on" in {
       enable(CompositeEnrolmentKey)
-      val key = connector.enrolmentKey(mtdbsa, utr).asString
+      val key = connector.enrolmentKey(mtdbsa, Some(utr)).asString
       key.contains(utr) mustBe true
     }
 
     "not contain the utr if FS is off" in {
       disable(CompositeEnrolmentKey)
-      val key = connector.enrolmentKey(mtdbsa, utr).asString
+      val key = connector.enrolmentKey(mtdbsa, Some(utr)).asString
       key.contains(utr) mustBe false
     }
   }

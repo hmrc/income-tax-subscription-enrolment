@@ -40,7 +40,7 @@ class EnrolmentService @Inject()(
   )(implicit hc: HeaderCarrier): Future[Either[Failure, Seq[Outcome]]] = {
     val result = SuccessBase()
     for {
-      resultES6  <- upsertEnrolmentAllocation(result, nino, mtdbsa, utr)
+      resultES6  <- upsertEnrolmentAllocation(result, nino, mtdbsa)
       resultES1  <- getGroupIdForEnrolment(resultES6, nino, utr)
       resultES0  <- getUserIdsForEnrolment(resultES1, nino, utr)
       resultUGS  <- getAdminUserForGroup(resultES0, nino, resultES1.groupId, resultES0.userIds)
@@ -71,12 +71,11 @@ class EnrolmentService @Inject()(
   private def upsertEnrolmentAllocation(
     result: Success,
     nino: String,
-    mtdbsa: String,
-    utr: String
+    mtdbsa: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES6] = {
     EitherT {
       val location = "upsertEnrolmentAllocation"
-      enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino, utr).map {
+      enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
         case Right(_) =>
           Right(SuccessES6(
             outcomes = result.outcomes :+ Outcome.success("ES6")

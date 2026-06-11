@@ -36,15 +36,14 @@ class EnrolmentStoreProxyConnector @Inject()(
 
   def upsertEnrolment(
     mtdbsa: String,
-    nino: String,
-    utr: String
+    nino: String
   )(implicit hc: HeaderCarrier): Future[EnrolmentResponse] = {
     val requestBody = EnrolmentStoreProxyRequest(Seq(EnrolmentStoreProxyVerifier(
       key = "NINO",
       value = nino
     )))
     import connectors.EnrolmentStoreParsers.UpsertResponseParser
-    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey(mtdbsa, utr).asString}"
+    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey(mtdbsa).asString}"
     http.put(url).withBody(
       body = Json.toJson(requestBody)
     ).execute
@@ -85,7 +84,7 @@ class EnrolmentStoreProxyConnector @Inject()(
       "type" -> "principal",
       "action" -> "enrolAndActivate"
     )
-    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey(mtdbsa, utr).asString}"
+    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey(mtdbsa, Some(utr)).asString}"
     import connectors.EnrolmentStoreParsers.AllocateEnrolmentResponseHttpReads
     http.post(url).withBody(
       body = requestBody
@@ -105,8 +104,11 @@ class EnrolmentStoreProxyConnector @Inject()(
     http.post(url).execute
   }
 
-  def enrolmentKey(mtdbsa: String, utr: String): EnrolmentKey = {
-    val utrId = if (isEnabled(CompositeEnrolmentKey)) Seq("UTR" -> utr) else Seq.empty
+  def enrolmentKey(mtdbsa: String, utr: Option[String] = None): EnrolmentKey = {
+    val utrId = utr match {
+      case Some(utr) if isEnabled(CompositeEnrolmentKey) => Seq("UTR" -> utr)
+      case _ => Seq.empty
+    }
     EnrolmentKey(
       serviceName = "HMRC-MTD-IT",
       identifiers = Seq("MTDITID" -> mtdbsa) ++ utrId:_*
