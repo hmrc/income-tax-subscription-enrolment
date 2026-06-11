@@ -69,31 +69,31 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
   }
 
   def stubES8(fail: Boolean, appConfig: AppConfig, groupId: String, mtdbsa: String, utr: Option[String]): Seq[String] = {
-    val utrId = utr match {
-      case Some(utr) => Seq("UTR" -> utr)
-      case _ => Seq.empty
-    }
-    val enrolmentKey = EnrolmentKey(
-      serviceName = "HMRC-MTD-IT",
-      identifiers = Seq("MTDITID" -> mtdbsa) ++ utrId:_*
-    )
-    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey.asString}"
+    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey(mtdbsa, utr).asString}"
     when(method = POST, uri = url.toLocal)
       .thenReturn(if (fail) Status.OK else Status.CREATED)
     Seq(url.toString)
   }
 
-  def stubES11(fail: Boolean, appConfig: AppConfig, userIds: Seq[String], mtdbsa: String): Seq[String] = {
-    val enrolmentKey = EnrolmentKey(
-      serviceName = "HMRC-MTD-IT",
-      identifiers = "MTDITID" -> mtdbsa
-    )
+  def stubES11(fail: Boolean, appConfig: AppConfig, userIds: Seq[String], mtdbsa: String, utr: Option[String]): Seq[String] = {
+    val key = enrolmentKey(mtdbsa, utr).asString
     userIds.map { userId =>
-      val url = url"${appConfig.assignEnrolmentUrl(userId)}/${enrolmentKey.asString}"
+      val url = url"${appConfig.assignEnrolmentUrl(userId)}/$key"
       when(method = POST, uri = url.toLocal)
         .thenReturn(if (fail) Status.OK else Status.CREATED)
       url.toString
     }
+  }
+  
+  private def enrolmentKey(mtdbsa: String, utr: Option[String]) = {
+    val utrId = utr match {
+      case Some(utr) => Seq("UTR" -> utr)
+      case _ => Seq.empty
+    }
+    EnrolmentKey(
+      serviceName = "HMRC-MTD-IT",
+      identifiers = Seq("MTDITID" -> mtdbsa) ++ utrId:_*
+    )
   }
 
   implicit class StubURL(url: URL) {

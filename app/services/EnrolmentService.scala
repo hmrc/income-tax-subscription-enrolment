@@ -45,7 +45,7 @@ class EnrolmentService @Inject()(
       resultES0  <- getUserIdsForEnrolment(resultES1, nino, utr)
       resultUGS  <- getAdminUserForGroup(resultES0, nino, resultES1.groupId, resultES0.userIds)
       resultES8  <- allocateEnrolmentWithoutKnownFacts(resultUGS, nino, utr, mtdbsa, resultES1.groupId, resultUGS.userId)
-      resultES11 <- assignEnrolment(resultES8, nino, resultES0.userIds, resultUGS.userId, mtdbsa)
+      resultES11 <- assignEnrolment(resultES8, nino, resultES0.userIds, resultUGS.userId, mtdbsa, utr)
     } yield {
       resultES11.outcomes
     }
@@ -221,7 +221,8 @@ class EnrolmentService @Inject()(
     nino: String,
     allUsers: Seq[String],
     adminUser: String,
-    mtdbsa: String
+    mtdbsa: String,
+    utr: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessBase] = {
     val apiName = "ES11"
     val outcomes = result.outcomes
@@ -235,7 +236,7 @@ class EnrolmentService @Inject()(
         val location = "assignEnrolment"
         Future.sequence {
           userIds.map { userId =>
-            enrolmentStoreProxyConnector.assignEnrolment(userId, mtdbsa)
+            enrolmentStoreProxyConnector.assignEnrolment(userId, mtdbsa, utr)
           }
         } map { userIdResponses =>
           if (userIdResponses.forall(_.isRight)) {

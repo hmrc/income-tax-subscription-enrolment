@@ -45,7 +45,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     mockGroupConnector
   )(executionContext)
 
-  private def setup(users: Seq[String] = userIds) = {
+  private def setup(users: Seq[String] = userIds): Unit = {
     reset(mockEnrolConnector)
     reset(mockGroupConnector)
     when(mockEnrolConnector.upsertEnrolment(eql(mtdbsa), eql(nino))(any())).thenReturn(
@@ -64,7 +64,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       Future.successful(Right(EnrolSuccess))
     )
     users.tail.foreach { userId =>
-      when(mockEnrolConnector.assignEnrolment(eql(userId), eql(mtdbsa))(any())).thenReturn(
+      when(mockEnrolConnector.assignEnrolment(eql(userId), eql(mtdbsa), eql(utr))(any())).thenReturn(
         Future.successful(Right(EnrolmentAssigned))
       )
     }
@@ -90,7 +90,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
             verify(mockGroupConnector, times(1)).getUsersForGroup(eql(groupId))(any())
             verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(eql(groupId), eql(users.head), eql(mtdbsa), eql(utr))(any())
             users.tail.foreach { userId =>
-              verify(mockEnrolConnector, times(1)).assignEnrolment(eql(userId), eql(mtdbsa))(any())
+              verify(mockEnrolConnector, times(1)).assignEnrolment(eql(userId), eql(mtdbsa), eql(utr))(any())
             }
           case Left(_) =>
             fail()
@@ -113,7 +113,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       verify(mockEnrolConnector, times(0)).getUserIds(any())(any())
       verify(mockGroupConnector, times(0)).getUsersForGroup(any())(any())
       verify(mockEnrolConnector, times(0)).allocateEnrolmentWithoutKnownFacts(any(), any(), any(), any())(any())
-      verify(mockEnrolConnector, times(0)).assignEnrolment(any(), any())(any())
+      verify(mockEnrolConnector, times(0)).assignEnrolment(any(), any(), any())(any())
     }
 
     "return failure without error if other APIs fail" in {
@@ -208,7 +208,7 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
     val users = userIds.tail
     val message = s"Error allocating enrolment to: [${users.mkString(", ")}]"
     users.foreach { userId =>
-      when(mockEnrolConnector.assignEnrolment(eql(userId), eql(mtdbsa))(any())).thenReturn(
+      when(mockEnrolConnector.assignEnrolment(eql(userId), eql(mtdbsa), eql(utr))(any())).thenReturn(
         Future.successful(Left(EnrolmentAssignmentFailure(SERVICE_UNAVAILABLE, "")))
       )
     }

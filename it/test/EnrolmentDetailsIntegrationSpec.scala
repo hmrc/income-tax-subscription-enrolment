@@ -51,13 +51,14 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with FeatureSwit
 
   private def setup(useCompositeKey: Boolean, apiToFail: String = ""): Map[String, Seq[String]] = {
     WireMock.reset()
+    val optUtr = if (useCompositeKey) Some(utr) else None
     Map(
       "ES6" -> stubES6(apiToFail == "ES6", appConfig, mtdbsa),
       "ES1" -> stubES1(apiToFail == "ES1", appConfig, utr, groupId),
       "ES0" -> stubES0(apiToFail == "ES0", appConfig, utr, userIds),
       "UGS" -> stubUGS(apiToFail == "UGS", appConfig, groupId, userIds),
-      "ES8" -> stubES8(apiToFail == "ES8", appConfig, groupId, mtdbsa, if (useCompositeKey) Some(utr) else None),
-      "ES11" -> stubES11(apiToFail == "ES11", appConfig, userIds, mtdbsa)
+      "ES8" -> stubES8(apiToFail == "ES8", appConfig, groupId, mtdbsa, optUtr),
+      "ES11" -> stubES11(apiToFail == "ES11", appConfig, userIds, mtdbsa, optUtr)
     )
   }
 
@@ -86,10 +87,11 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with FeatureSwit
         response.status shouldBe CREATED
         response.body.contains("Failure") shouldBe false
 
-        val ES8Url = urls.get("ES8")
-        ES8Url match {
-          case Some(urls) if urls.size == 1 => urls.head.contains(utr) shouldBe useCompositeKey
-          case _ => fail()
+        Seq("ES8", "ES11").foreach { api =>
+          urls.get(api) match {
+            case Some(urls) => urls.foreach { _.contains(utr) shouldBe useCompositeKey }
+            case _ => fail()
+          }
         }
       }
     }

@@ -93,13 +93,10 @@ class EnrolmentStoreProxyConnector @Inject()(
 
   def assignEnrolment(
     userId: String,
-    mtdbsa: String
+    mtdbsa: String,
+    utr: String
   )(implicit hc: HeaderCarrier): Future[AssignEnrolmentToUserResponse] = {
-    val enrolmentKey = EnrolmentKey(
-      serviceName = "HMRC-MTD-IT",
-      identifiers = "MTDITID" -> mtdbsa
-    )
-    val url = url"${appConfig.assignEnrolmentUrl(userId)}/${enrolmentKey.asString}"
+    val url = url"${appConfig.assignEnrolmentUrl(userId)}/${enrolmentKey(mtdbsa, Some(utr)).asString}"
     import connectors.EnrolmentStoreParsers.AssignEnrolmentToUserHttpReads
     http.post(url).execute
   }
