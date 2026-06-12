@@ -18,7 +18,7 @@ package services
 
 import base.TestData
 import config.AppConfig
-import config.featureswitch.FeatureSwitch.{CompositeEnrolmentKey, DistributedKnownFactsPattern}
+import config.featureswitch.FeatureSwitch.DistributedKnownFactsPattern
 import config.featureswitch.FeatureSwitching
 import connectors.EnrolmentStoreProxyConnector.*
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, UsersGroupsSearchConnectionFailure}
