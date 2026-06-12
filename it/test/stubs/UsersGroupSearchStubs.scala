@@ -26,7 +26,7 @@ import java.net.URL
 
 object UsersGroupSearchStubs {
 
-  def stubUGS(fail: Boolean, appConfig: AppConfig, groupId: String, userIds: Seq[String]): Unit = {
+  def stubUGS(fail: Boolean, appConfig: AppConfig, groupId: String, userIds: Seq[String]): Seq[String] = {
     val json = fail match {
       case false => Json.toJson(userIds.map { id => Json.obj(
         "userId" -> id,
@@ -37,6 +37,7 @@ object UsersGroupSearchStubs {
     val url = url"${appConfig.usersForGroupUrl(groupId)}"
     when(method = GET, uri = url.toLocal)
       .thenReturn(NON_AUTHORITATIVE_INFORMATION, json)
+    Seq(url.toString)
   }
 
   implicit class StubURL(url: URL) {

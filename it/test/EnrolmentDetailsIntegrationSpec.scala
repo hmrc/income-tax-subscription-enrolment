@@ -15,10 +15,13 @@
  */
 
 import base.TestData
+import com.github.tomakehurst.wiremock.client.WireMock
 import config.AppConfig
+import config.featureswitch.FeatureSwitch.CompositeEnrolmentKey
+import config.featureswitch.FeatureSwitching
 import helpers.ComponentSpecBase
 import models.EnrolmentDetails
-import play.api.http.Status._
+import play.api.http.Status.*
 import play.api.libs.json.Json
 import play.api.test.Helpers.{await, defaultAwaitTimeout}
 import stubs.EnrolmentStoreProxyStubs.{stubES0, stubES1, stubES11, stubES6, stubES8}
@@ -27,9 +30,9 @@ import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 
 import java.util.UUID
 
-class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
+class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with FeatureSwitching with TestData {
 
-  private val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+  override val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   private val validEnrolmentDetails = EnrolmentDetails(
     utr = utr,
@@ -46,31 +49,56 @@ class EnrolmentDetailsIntegrationSpec extends ComponentSpecBase with TestData {
 
   private val correlationId = UUID.randomUUID().toString
 
-  private def setup(apiToFail: String = ""): Unit = {
-    stubES6(apiToFail == "ES6", appConfig, mtdbsa)
-    stubES1(apiToFail == "ES1", appConfig, utr, groupId)
-    stubES0(apiToFail == "ES0", appConfig, utr, userIds)
-    stubUGS(apiToFail == "UGS", appConfig, groupId, userIds)
-    stubES8(apiToFail == "ES8", appConfig, groupId, mtdbsa)
-    stubES11(apiToFail == "ES11", appConfig, userIds, mtdbsa)
+  private def setup(useCompositeKey: Boolean, apiToFail: String = ""): Map[String, Seq[String]] = {
+    WireMock.reset()
+    val optUtr = if (useCompositeKey) Some(utr) else None
+    Map(
+      "ES6" -> stubES6(apiToFail == "ES6", appConfig, mtdbsa),
+      "ES1" -> stubES1(apiToFail == "ES1", appConfig, utr, groupId),
+      "ES0" -> stubES0(apiToFail == "ES0", appConfig, utr, userIds),
+      "UGS" -> stubUGS(apiToFail == "UGS", appConfig, groupId, userIds),
+      "ES8" -> stubES8(apiToFail == "ES8", appConfig, groupId, mtdbsa, optUtr),
+      "ES11" -> stubES11(apiToFail == "ES11", appConfig, userIds, mtdbsa, optUtr)
+    )
+  }
+
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    disable(CompositeEnrolmentKey)
   }
 
   "enrol" should {
     "respond with 201 status if all APIs succeed" in {
-      setup()
-      val response = await(
-        buildClient("/enrol")
-          .withHttpHeaders("correlationId" -> correlationId)
-          .post(Json.toJson(validEnrolmentDetails))
-      )
+      Seq(false, true).foreach { useCompositeKey =>
+        if (useCompositeKey) {
+          enable(CompositeEnrolmentKey)
+          info("[CompositeEnrolmentKey] is enabled")
+        } else {
+          disable(CompositeEnrolmentKey)
+          info("[CompositeEnrolmentKey] is disabled")
+        }
+        val urls = setup(useCompositeKey)
+        val response = await(
+          buildClient("/enrol")
+            .withHttpHeaders("correlationId" -> correlationId)
+            .post(Json.toJson(validEnrolmentDetails))
+        )
 
-      response.status shouldBe CREATED
-      response.body.contains("Failure") shouldBe false
+        response.status shouldBe CREATED
+        response.body.contains("Failure") shouldBe false
+
+        Seq("ES8", "ES11").foreach { api =>
+          urls.get(api) match {
+            case Some(urls) => urls.foreach { _.contains(utr) shouldBe useCompositeKey }
+            case _ => fail()
+          }
+        }
+      }
     }
 
     "respond with an error if one of the APIs fails" in {
       apis.foreach { apiToFail =>
-        setup(apiToFail)
+        setup(false, apiToFail)
         info(s"Failing: [$apiToFail]")
         val response = await(
           buildClient("/enrol")

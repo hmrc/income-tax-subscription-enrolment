@@ -27,7 +27,7 @@ import java.net.URL
 
 object EnrolmentStoreProxyStubs extends WireMockMethods {
 
-  def stubES6(fail: Boolean, appConfig: AppConfig, mtdbsa: String): Unit = {
+  def stubES6(fail: Boolean, appConfig: AppConfig, mtdbsa: String): Seq[String] = {
     val enrolmentKey = EnrolmentKey(
       serviceName = "HMRC-MTD-IT",
       identifiers = "MTDITID" -> mtdbsa
@@ -35,9 +35,10 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}"
     when(method = PUT, uri = url.toLocal)
       .thenReturn(if (fail) Status.OK else Status.NO_CONTENT)
+    Seq(url.toString)
   }
 
-  def stubES1(fail: Boolean, appConfig: AppConfig, utr: String, groupId: String): Unit = {
+  def stubES1(fail: Boolean, appConfig: AppConfig, utr: String, groupId: String): Seq[String] = {
     val enrolmentKey = EnrolmentKey(
       serviceName = "IR-SA",
       identifiers = "UTR" -> utr
@@ -49,9 +50,10 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/groups?type=principal"
     when(method = GET, uri = url.toLocal)
       .thenReturn(OK, json)
+    Seq(url.toString)
   }
 
-  def stubES0(fail: Boolean, appConfig: AppConfig, utr: String, userIds: Seq[String]): Unit = {
+  def stubES0(fail: Boolean, appConfig: AppConfig, utr: String, userIds: Seq[String]): Seq[String] = {
     val enrolmentKey = EnrolmentKey(
       serviceName = "IR-SA",
       identifiers = "UTR" -> utr
@@ -63,28 +65,35 @@ object EnrolmentStoreProxyStubs extends WireMockMethods {
     val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}/users"
     when(method = GET, uri = url.toLocal)
       .thenReturn(OK, json)
+    Seq(url.toString)
   }
 
-  def stubES8(fail: Boolean, appConfig: AppConfig, groupId: String, mtdbsa: String): Unit = {
-    val enrolmentKey = EnrolmentKey(
-      serviceName = "HMRC-MTD-IT",
-      identifiers = "MTDITID" -> mtdbsa
-    )
-    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey.asString}"
+  def stubES8(fail: Boolean, appConfig: AppConfig, groupId: String, mtdbsa: String, utr: Option[String]): Seq[String] = {
+    val url = url"${appConfig.allocateEnrolmentEnrolmentStoreUrl(groupId)}/${enrolmentKey(mtdbsa, utr).asString}"
     when(method = POST, uri = url.toLocal)
       .thenReturn(if (fail) Status.OK else Status.CREATED)
+    Seq(url.toString)
   }
 
-  def stubES11(fail: Boolean, appConfig: AppConfig, userIds: Seq[String], mtdbsa: String): Unit = {
-    val enrolmentKey = EnrolmentKey(
-      serviceName = "HMRC-MTD-IT",
-      identifiers = "MTDITID" -> mtdbsa
-    )
-    userIds.foreach { userId =>
-      val url = url"${appConfig.assignEnrolmentUrl(userId)}/${enrolmentKey.asString}"
+  def stubES11(fail: Boolean, appConfig: AppConfig, userIds: Seq[String], mtdbsa: String, utr: Option[String]): Seq[String] = {
+    val key = enrolmentKey(mtdbsa, utr).asString
+    userIds.map { userId =>
+      val url = url"${appConfig.assignEnrolmentUrl(userId)}/$key"
       when(method = POST, uri = url.toLocal)
         .thenReturn(if (fail) Status.OK else Status.CREATED)
+      url.toString
     }
+  }
+  
+  private def enrolmentKey(mtdbsa: String, utr: Option[String]) = {
+    val utrId = utr match {
+      case Some(utr) => Seq("UTR" -> utr)
+      case _ => Seq.empty
+    }
+    EnrolmentKey(
+      serviceName = "HMRC-MTD-IT",
+      identifiers = Seq("MTDITID" -> mtdbsa) ++ utrId:_*
+    )
   }
 
   implicit class StubURL(url: URL) {

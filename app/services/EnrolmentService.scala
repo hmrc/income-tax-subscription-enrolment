@@ -44,8 +44,8 @@ class EnrolmentService @Inject()(
       resultES1  <- getGroupIdForEnrolment(resultES6, nino, utr)
       resultES0  <- getUserIdsForEnrolment(resultES1, nino, utr)
       resultUGS  <- getAdminUserForGroup(resultES0, nino, resultES1.groupId, resultES0.userIds)
-      resultES8  <- allocateEnrolmentWithoutKnownFacts(resultUGS, nino, mtdbsa, resultES1.groupId, resultUGS.userId)
-      resultES11 <- assignEnrolment(resultES8, nino, resultES0.userIds, resultUGS.userId, mtdbsa)
+      resultES8  <- allocateEnrolmentWithoutKnownFacts(resultUGS, nino, utr, mtdbsa, resultES1.groupId, resultUGS.userId)
+      resultES11 <- assignEnrolment(resultES8, nino, resultES0.userIds, resultUGS.userId, mtdbsa, utr)
     } yield {
       resultES11.outcomes
     }
@@ -193,6 +193,7 @@ class EnrolmentService @Inject()(
   private def allocateEnrolmentWithoutKnownFacts(
     result: SuccessUGS,
     nino: String,
+    utr: String,
     mtdbsa: String,
     groupId: String,
     userId: String
@@ -201,7 +202,7 @@ class EnrolmentService @Inject()(
     val outcomes = result.outcomes
     EitherT {
       val location = "allocateEnrolmentWithoutKnownFacts"
-      enrolmentStoreProxyConnector.allocateEnrolmentWithoutKnownFacts(groupId = groupId, userId, mtdbsa).map {
+      enrolmentStoreProxyConnector.allocateEnrolmentWithoutKnownFacts(groupId = groupId, userId, mtdbsa, utr).map {
         case Right(EnrolSuccess) =>
           Right(SuccessBase(
             outcomes = outcomes :+ Outcome.success(apiName)
@@ -220,7 +221,8 @@ class EnrolmentService @Inject()(
     nino: String,
     allUsers: Seq[String],
     adminUser: String,
-    mtdbsa: String
+    mtdbsa: String,
+    utr: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessBase] = {
     val apiName = "ES11"
     val outcomes = result.outcomes
@@ -234,7 +236,7 @@ class EnrolmentService @Inject()(
         val location = "assignEnrolment"
         Future.sequence {
           userIds.map { userId =>
-            enrolmentStoreProxyConnector.assignEnrolment(userId, mtdbsa)
+            enrolmentStoreProxyConnector.assignEnrolment(userId, mtdbsa, utr)
           }
         } map { userIdResponses =>
           if (userIdResponses.forall(_.isRight)) {

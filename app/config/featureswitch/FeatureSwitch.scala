@@ -22,7 +22,7 @@ sealed trait FeatureSwitch {
 }
 
 object FeatureSwitch {
-  val prefix = "feature-switch"
+  private val prefix = "feature-switch"
 
   case object CompositeEnrolmentKey extends FeatureSwitch {
     override val name: String = s"$prefix.composite-enrolment-key"
