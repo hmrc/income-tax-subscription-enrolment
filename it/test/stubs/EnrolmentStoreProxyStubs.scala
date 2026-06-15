@@ -27,15 +27,19 @@ import java.net.URL
 
 object EnrolmentStoreProxyStubs extends WireMockMethods {
 
-  def stubES6(fail: Boolean, appConfig: AppConfig, mtdbsa: String): Seq[String] = {
-    val enrolmentKey = EnrolmentKey(
-      serviceName = "HMRC-MTD-IT",
-      identifiers = "MTDITID" -> mtdbsa
-    )
-    val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}"
-    when(method = PUT, uri = url.toLocal)
-      .thenReturn(if (fail) Status.OK else Status.NO_CONTENT)
-    Seq(url.toString)
+  def stubES6(fail: Boolean, appConfig: AppConfig, mtdbsa: String, skip: Boolean): Seq[String] = {
+    if (skip) {
+      Seq.empty
+    } else {
+      val enrolmentKey = EnrolmentKey(
+        serviceName = "HMRC-MTD-IT",
+        identifiers = "MTDITID" -> mtdbsa
+      )
+      val url = url"${appConfig.enrolmentEnrolmentStoreUrl}/${enrolmentKey.asString}"
+      when(method = PUT, uri = url.toLocal)
+        .thenReturn(if (fail) Status.OK else Status.NO_CONTENT)
+      Seq(url.toString)
+    }
   }
 
   def stubES1(fail: Boolean, appConfig: AppConfig, utr: String, groupId: String): Seq[String] = {

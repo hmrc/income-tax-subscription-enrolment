@@ -17,12 +17,16 @@
 package services
 
 import base.TestData
-import connectors.EnrolmentStoreProxyConnector._
+import config.AppConfig
+import config.featureswitch.FeatureSwitch.DistributedKnownFactsPattern
+import config.featureswitch.FeatureSwitching
+import connectors.EnrolmentStoreProxyConnector.*
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
 import models.{EnrolmentError, Outcome}
-import org.mockito.ArgumentMatchers.{any, eq => eql}
+import org.mockito.ArgumentMatchers.{any, eq as eql}
 import org.mockito.Mockito.{reset, times, verify, when}
+import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.must.Matchers.mustBe
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -32,7 +36,9 @@ import play.api.test.Helpers.{await, defaultAwaitTimeout}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
+class EnrolmentServiceSpec extends AnyWordSpec with BeforeAndAfterEach with Matchers with FeatureSwitching with TestData {
+
+  override val appConfig: AppConfig = mock[AppConfig]
 
   val executionContext: ExecutionContext =
     scala.concurrent.ExecutionContext.Implicits.global
@@ -42,7 +48,8 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
 
   private val service = new EnrolmentService(
     mockEnrolConnector,
-    mockGroupConnector
+    mockGroupConnector,
+    appConfig
   )(executionContext)
 
   private def setup(users: Seq[String] = userIds): Unit = {
@@ -69,31 +76,45 @@ class EnrolmentServiceSpec extends AnyWordSpec with Matchers with TestData {
       )
     }
   }
+  
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    disable(DistributedKnownFactsPattern)
+  }
 
   "enrol" should {
     "return success when all APIs succeed" in {
-      Seq(userIds, Seq(userIds.head)).foreach { users =>
-        setup(users)
-        val result = await(service.enrol(utr, nino, mtdbsa))
-        val allAPIs = Seq("ES6") ++ (users.size match {
-          case 2 => otherAPIs
-          case _ => otherAPIs.filter(_ != "ES11")
-        })
-        info(s"Succeeding [${allAPIs.mkString(", ")}]")
-        val expected = allAPIs.map(Outcome.success)
-        result match {
-          case Right(outcomes) =>
-            outcomes mustBe expected
-            verify(mockEnrolConnector, times(1)).upsertEnrolment(eql(mtdbsa), eql(nino))(any())
-            verify(mockEnrolConnector, times(1)).getAllocatedEnrolments(eql(utr))(any())
-            verify(mockEnrolConnector, times(1)).getUserIds(eql(utr))(any())
-            verify(mockGroupConnector, times(1)).getUsersForGroup(eql(groupId))(any())
-            verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(eql(groupId), eql(users.head), eql(mtdbsa), eql(utr))(any())
-            users.tail.foreach { userId =>
-              verify(mockEnrolConnector, times(1)).assignEnrolment(eql(userId), eql(mtdbsa), eql(utr))(any())
-            }
-          case Left(_) =>
-            fail()
+      Seq(false, true).foreach { skipES6 =>
+        if (skipES6) {
+          enable(DistributedKnownFactsPattern)
+          info("[DistributedKnownFactsPattern] is enabled")
+        } else {
+          disable(DistributedKnownFactsPattern)
+          info("[DistributedKnownFactsPattern] is disabled")
+        }
+        Seq(userIds, Seq(userIds.head)).foreach { users =>
+          setup(users)
+          val result = await(service.enrol(utr, nino, mtdbsa))
+          val allAPIs = (if (skipES6) Seq.empty else Seq("ES6")) ++ (users.size match {
+            case 2 => otherAPIs
+            case _ => otherAPIs.filter(_ != "ES11")
+          })
+          info(s"Succeeding [${allAPIs.mkString(", ")}]")
+          val expected = allAPIs.map(Outcome.success)
+          result match {
+            case Right(outcomes) =>
+              outcomes mustBe expected
+              verify(mockEnrolConnector, times(if (skipES6) 0 else 1)).upsertEnrolment(eql(mtdbsa), eql(nino))(any())
+              verify(mockEnrolConnector, times(1)).getAllocatedEnrolments(eql(utr))(any())
+              verify(mockEnrolConnector, times(1)).getUserIds(eql(utr))(any())
+              verify(mockGroupConnector, times(1)).getUsersForGroup(eql(groupId))(any())
+              verify(mockEnrolConnector, times(1)).allocateEnrolmentWithoutKnownFacts(eql(groupId), eql(users.head), eql(mtdbsa), eql(utr))(any())
+              users.tail.foreach { userId =>
+                verify(mockEnrolConnector, times(1)).assignEnrolment(eql(userId), eql(mtdbsa), eql(utr))(any())
+              }
+            case Left(_) =>
+              fail()
+          }
         }
       }
     }

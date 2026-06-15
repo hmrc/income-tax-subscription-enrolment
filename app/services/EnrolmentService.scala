@@ -17,6 +17,9 @@
 package services
 
 import cats.data.EitherT
+import config.AppConfig
+import config.featureswitch.FeatureSwitch.DistributedKnownFactsPattern
+import config.featureswitch.FeatureSwitching
 import connectors.EnrolmentStoreProxyConnector.{EnrolFailure, EnrolSuccess, EnrolmentAllocated, EnrolmentFailure, UsersFound}
 import connectors.UsersGroupsSearchConnector.{GroupUsersFound, InvalidJson, UsersGroupsSearchConnectionFailure}
 import connectors.{EnrolmentStoreProxyConnector, UsersGroupsSearchConnector}
@@ -30,8 +33,9 @@ import scala.concurrent.{ExecutionContext, Future}
 @Singleton
 class EnrolmentService @Inject()(
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
-  usersGroutSearchConnector: UsersGroupsSearchConnector
-)(implicit ec: ExecutionContext) extends Logging {
+  usersGroutSearchConnector: UsersGroupsSearchConnector,
+  val appConfig: AppConfig
+)(implicit ec: ExecutionContext) extends FeatureSwitching with Logging {
 
   def enrol(
     utr: String,
@@ -74,17 +78,23 @@ class EnrolmentService @Inject()(
     mtdbsa: String
   )(implicit hc: HeaderCarrier): EitherT[Future, Failure, SuccessES6] = {
     EitherT {
-      val location = "upsertEnrolmentAllocation"
-      enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
-        case Right(_) =>
-          Right(SuccessES6(
-            outcomes = result.outcomes :+ Outcome.success("ES6")
-          ))
-        case Left(EnrolmentStoreProxyConnector.EnrolmentFailure(status, message)) =>
-          logError(location, nino, s"Failed to upsert enrolment with status: $status, message: $message")
-          Left(Failure(
-            error = Some(EnrolmentError(status.toString, message)))
-          )
+      if (isEnabled(DistributedKnownFactsPattern)) {
+        Future.successful(Right(SuccessES6(
+          outcomes = result.outcomes
+        )))
+      } else {
+        val location = "upsertEnrolmentAllocation"
+        enrolmentStoreProxyConnector.upsertEnrolment(mtdbsa, nino).map {
+          case Right(_) =>
+            Right(SuccessES6(
+              outcomes = result.outcomes :+ Outcome.success("ES6")
+            ))
+          case Left(EnrolmentStoreProxyConnector.EnrolmentFailure(status, message)) =>
+            logError(location, nino, s"Failed to upsert enrolment with status: $status, message: $message")
+            Left(Failure(
+              error = Some(EnrolmentError(status.toString, message)))
+            )
+        }
       }
     }
   }
